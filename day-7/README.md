@@ -12,11 +12,17 @@ The query uses a Common Table Expression (CTE) instead of a correlated subquery 
 
 This exercise was performed against the Week-1 QuotesApi SQLite database:
 
-`Day-3/Day-3-Task-7/QuotesApi/quotes.db`
+Day-3/Day-3-Task-7/QuotesApi/quotes.db
 
-The relevant table is `Quotes` with the columns `Id`, `Author`, `Text`, and `UserId`.
+The relevant table is:
 
-Note: The Quotes table does not contain a `CreatedAt` column. Therefore, `Id DESC` is used as the proxy for the most-recent quote because higher IDs represent later inserted records.
+Quotes
+- Id
+- Author
+- Text
+- UserId
+
+Note: The Quotes table does not contain a CreatedAt column. Therefore, Id DESC is used as the proxy for the most-recent quote because higher IDs represent later inserted records.
 
 ## SQL Query
 
@@ -54,7 +60,9 @@ The query was executed directly against the actual Week-1 Quotes database.
 
 ## Result-Set Evidence
 
-The actual SQLite result is captured in `result-set.png` in this folder.
+The actual SQLite result is captured in:
+
+result-set.png
 
 ## Why a CTE over a correlated subquery?
 
