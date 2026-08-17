@@ -56,13 +56,15 @@ The query was executed directly against the actual Week-1 Quotes database.
 
 | Author | QuoteCount | MostRecentQuote |
 |---|---:|---|
-| Albert Einstein | 7 | Learning never stops |
+| Albert Einstein | 8 | Imagination is more important than knowledge |
+| Mahatma Gandhi | 1 | Be the change you wish to see |
+| Steve Jobs | 1 | Stay hungry, stay foolish |
+
+There are 3 result rows because the query returns one row per distinct author. This is the top 10 result set (up to 10 authors).
 
 ## Result-Set Evidence
 
-The actual SQLite result is captured in:
-
-result-set.png
+The actual SQLite result is captured in `result-set.png` in this folder.
 
 ## Why a CTE over a correlated subquery?
 
