@@ -48,6 +48,8 @@ ORDER BY Author;
 
 The query was executed directly against the actual Week-1 Quotes database containing 10 quote rows.
 
+The result set contains one row per author, so the three distinct authors produce three output rows.
+
 | Author | QuoteCount | MostRecentQuote |
 |---|---:|---|
 | Albert Einstein | 8 | Imagination is more important than knowledge |
