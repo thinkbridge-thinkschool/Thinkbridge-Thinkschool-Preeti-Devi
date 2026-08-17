@@ -46,14 +46,15 @@ ORDER BY Author;
 
 ## Result Set
 
-The query was executed directly against the actual Week-1 Quotes database.
+The query was executed directly against the actual Week-1 Quotes database containing 10 quote rows.
 
 | Author | QuoteCount | MostRecentQuote |
 |---|---:|---|
-| Albert Einstein | 7 | Learning never stops |
+| Albert Einstein | 8 | Imagination is more important than knowledge |
+| Mahatma Gandhi | 1 | Be the change you wish to see |
+| Steve Jobs | 1 | Stay hungry, stay foolish |
 
 ## Result-Set Evidence
-
 The actual SQLite result is captured in `result-set.png` in this folder.
 
 ## Why a CTE over a correlated subquery?
