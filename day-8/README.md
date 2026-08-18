@@ -40,3 +40,25 @@ The test INSERT with the clustered index and two non-clustered indexes incurred 
 ## Key Learning
 
 Indexes can significantly improve selective read queries, but they also consume storage and add write-maintenance cost. SQL Server chooses the access method based on the estimated cost of the query.
+
+## Covering Indexes + Included Columns
+
+A narrow `Author` index produced an `Index Seek` followed by a `Key Lookup (Clustered)` because the query required columns that were not stored in the index.
+
+A covering index was then created using `INCLUDE`:
+
+CREATE NONCLUSTERED INDEX IX_IndexTest_Author_Covering
+ON dbo.IndexTest (Author)
+INCLUDE (Id, Category, CreatedAt, QuoteText);
+
+The covering index eliminated the Key Lookup.
+
+### Logical Reads
+
+| Stage | Logical Reads |
+|---|---:|
+| Before — Key Lookup | 43,900 |
+| After — Covering Index | 150 |
+| Reduction | 43,750 |
+
+This represents approximately a **99.66% reduction** in logical reads.
