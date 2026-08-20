@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using EfCoreTrackingBenchmark;
 
@@ -84,6 +84,49 @@ Console.WriteLine(
 
 Console.WriteLine(
     $"Allocation difference: {trackedResult.AllocatedBytes - noTrackingResult.AllocatedBytes:N0} bytes");
+
+Console.WriteLine();
+Console.WriteLine("=== DTO Projection Query ===");
+
+using (var context = new BenchmarkContext())
+{
+    var projectedQuotes = context.Quotes
+        .Where(q => q.Id <= 3)
+        .Select(q => new QuoteDto
+        {
+            Id = q.Id,
+            Author = q.Author
+        })
+        .ToList();
+
+    Console.WriteLine($"Rows returned: {projectedQuotes.Count}");
+}
+Console.WriteLine();
+Console.WriteLine("=== Client-Side Evaluation Demonstration ===");
+
+using (var context = new BenchmarkContext())
+{
+    var clientSideQuotes = context.Quotes
+        .AsEnumerable()
+        .Where(q => q.Author.EndsWith("1"))
+        .Take(3)
+        .ToList();
+
+    Console.WriteLine($"Client-side rows returned: {clientSideQuotes.Count}");
+}
+
+Console.WriteLine();
+Console.WriteLine("=== Fixed Database-Side Query ===");
+
+using (var context = new BenchmarkContext())
+{
+    var databaseSideQuotes = context.Quotes
+        .Where(q => q.Author.EndsWith("1"))
+        .Take(3)
+        .ToList();
+
+    Console.WriteLine($"Database-side rows returned: {databaseSideQuotes.Count}");
+}
 
 static BenchmarkResult Measure(Func<int> operation)
 {

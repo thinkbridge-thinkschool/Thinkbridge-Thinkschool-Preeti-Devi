@@ -1,0 +1,91 @@
+Day 10 - EF Core Query Translation + Projections
+================================================
+
+1. Original Whole-Entity Query
+--------------------------------
+
+Query:
+
+var quotes = context.Quotes
+    .Where(q => q.Id <= 3)
+    .ToList();
+
+Generated SQL:
+
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE "q"."Id" <= 3
+
+Rows returned: 3
+
+
+2. DTO Projection
+-----------------
+
+Query:
+
+var projectedQuotes = context.Quotes
+    .Where(q => q.Id <= 3)
+    .Select(q => new QuoteDto
+    {
+        Id = q.Id,
+        Author = q.Author
+    })
+    .ToList();
+
+Generated SQL:
+
+SELECT "q"."Id", "q"."Author"
+FROM "Quotes" AS "q"
+WHERE "q"."Id" <= 3
+
+Rows returned: 3
+
+
+3. Client-Side Evaluation
+-------------------------
+
+Problematic query:
+
+var clientSideQuotes = context.Quotes
+    .AsEnumerable()
+    .Where(q => q.Author.EndsWith("1"))
+    .Take(3)
+    .ToList();
+
+Generated SQL:
+
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+
+Client-side rows returned: 3
+
+
+4. Fixed Database-Side Query
+----------------------------
+
+Fixed query:
+
+var databaseSideQuotes = context.Quotes
+    .Where(q => q.Author.EndsWith("1"))
+    .Take(3)
+    .ToList();
+
+Generated SQL:
+
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE "q"."Author" LIKE '%1'
+LIMIT @p
+
+Database-side rows returned: 3
+
+
+Result
+------
+
+The DTO projection fetched only the required Id and Author columns.
+
+The client-side version loaded the full entity rows before filtering.
+
+The fixed version translated the EndsWith filter into SQL so SQLite performed the filtering.

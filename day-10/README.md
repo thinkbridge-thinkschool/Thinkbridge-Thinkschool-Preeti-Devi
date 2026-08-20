@@ -1,78 +1,132 @@
-# Day 10 - EF Core Change Tracker + AsNoTracking
+Day 10 - EF Core Query Translation + Projections
 
-## Objective
+Objective
 
-Demonstrate EF Core change tracking, identity resolution, and the read-performance difference between tracked queries and `AsNoTracking()` queries.
+Demonstrate how EF Core translates LINQ queries into SQL, how projections reduce the columns fetched from the database, and how accidental client-side evaluation can be avoided.
 
-The benchmark reads 10,000 rows from SQLite.
+SQL logging was enabled using `LogTo()` with sensitive-data logging for this local development exercise.
 
-## Identity Resolution
 
-### Query
+
+1. Original Whole-Entity Query
+
+Query
 
 csharp
-var first = context.Quotes.First(q => q.Id == 1);
-var second = context.Quotes.First(q => q.Id == 1);
-
-Console.WriteLine(ReferenceEquals(first, second));
-Console.WriteLine(context.Entry(first).State);
-
-### Observed Result
-
-text
-First and second reference are same object: True
-Entity state: Unchanged
-
-This demonstrates that within the same `DbContext`, EF Core returns the same tracked entity instance for the same database row.
-
-## Query Variant 1 - Tracking
-
-### Query
-
-var rows = context.Quotes
+var quotes = context.Quotes
+    .Where(q => q.Id <= 3)
     .ToList();
 
-This is the default EF Core behavior for entity queries. The returned entities are tracked by the `DbContext`.
 
-## Query Variant 2 - No Tracking
+Generated SQL
 
-### Query
+sql
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE "q"."Id" <= 3
 
-var rows = context.Quotes
-    .AsNoTracking()
+
+The whole-entity query fetches all columns required to materialize the 'Quote' entity: 'Id', 'Author', and 'Text'.
+
+
+
+2. DTO Projection
+
+DTO
+
+csharp
+public class QuoteDto
+{
+    public int Id { get; set; }
+    public string Author { get; set; } = "";
+}
+
+
+Projected Query
+
+csharp
+var projectedQuotes = context.Quotes
+    .Where(q => q.Id <= 3)
+    .Select(q => new QuoteDto
+    {
+        Id = q.Id,
+        Author = q.Author
+    })
     .ToList();
 
-`AsNoTracking()` tells EF Core not to track the returned entities, which is useful for read-only operations.
 
-## Benchmark
+Leaner Generated SQL
 
-The benchmark reads 10,000 rows using both query variants.
+sql
+SELECT "q"."Id", "q"."Author"
+FROM "Quotes" AS "q"
+WHERE "q"."Id" <= 3
 
-### Tracking
 
-Rows read: 10,000
-Time: 175.39 ms
-Allocated: 9,615,104 bytes
+The projection prevents EF Core from fetching the unused 'Text' column.
 
-### AsNoTracking
+This reduces the amount of data transferred from the database and avoids materializing an unnecessary entity property.
 
-Rows read: 10,000
-Time: 36.06 ms
-Allocated: 3,782,432 bytes
 
-### Difference
+3. Client-Side Evaluation Caught and Fixed
 
-Time difference: 139.33 ms
-Allocation difference: 5,832,672 bytes
+Problematic Query
 
-In this run, `AsNoTracking()` was approximately 4.86x faster and allocated approximately 60.7% less memory than the tracked query.
+csharp
+var clientSideQuotes = context.Quotes
+    .AsEnumerable()
+    .Where(q => q.Author.EndsWith("1"))
+    .Take(3)
+    .ToList();
 
-These measurements are from this local benchmark run and can vary between machines and runs.
 
-## When I Would NOT Use AsNoTracking
+SQL Generated
 
-I would not use `AsNoTracking()` when I need to modify the queried entities and save those changes through the same `DbContext`, because the entities need to be tracked for EF Core to detect and persist the changes normally.
+sql
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
 
-## Key Learning
 
-EF Core tracking provides identity resolution and change detection, but it adds overhead to read-only queries; `AsNoTracking()` is therefore useful on read-heavy paths where the returned entities do not need to be modified.
+'AsEnumerable()' switches the remaining LINQ operations to LINQ-to-Objects.
+
+Therefore, the 'Where()' and 'Take()' operations after 'AsEnumerable()' are performed on the client rather than being translated into SQL.
+
+This causes the database to return the full 'Quote' rows before the filtering is performed in application memory.
+
+Fixed Query
+
+csharp
+var databaseSideQuotes = context.Quotes
+    .Where(q => q.Author.EndsWith("1"))
+    .Take(3)
+    .ToList();
+
+
+SQL Generated After the Fix
+
+sql
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE "q"."Author" LIKE '%1'
+LIMIT @p
+
+
+The fixed query keeps the filtering inside the EF Core query pipeline, allowing SQLite to perform the filtering.
+
+Both versions returned 3 rows in this demonstration.
+
+
+
+Key Learning
+
+EF Core translates supported LINQ operations into SQL. Using projections with 'Select()' allows the application to fetch only the columns it needs, while accidentally switching to client-side LINQ can cause unnecessary data to be transferred and processed in application memory.
+
+
+
+Evidence
+
+The complete console output from the local run is stored in:
+
+'day-10/evidence/query-translation-output.txt'
+
+The evidence contains the actual SQL generated by EF Core for the entity query, DTO projection, client-side evaluation demonstration, and fixed database-side query.
