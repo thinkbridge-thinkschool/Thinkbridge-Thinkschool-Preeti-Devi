@@ -1,0 +1,36 @@
+Day 10 - EF Core Change Tracker + AsNoTracking
+===============================================
+
+Benchmark: 10,000-row SQLite read
+
+Identity Resolution / Tracking
+------------------------------
+First and second reference are same object: True
+Entity state: Unchanged
+
+Tracked Query
+-------------
+Rows read: 10,000
+Time: 175.39 ms
+Allocated: 9,615,104 bytes
+
+AsNoTracking Query
+------------------
+Rows read: 10,000
+Time: 36.06 ms
+Allocated: 3,782,432 bytes
+
+Comparison
+----------
+Time difference: 139.33 ms
+Allocation difference: 5,832,672 bytes
+
+Observed result
+---------------
+AsNoTracking() was approximately 4.86x faster and allocated approximately
+60.7% less memory in this benchmark run.
+
+Note
+----
+These measurements were taken from the local benchmark run and may vary
+between machines and runs.
