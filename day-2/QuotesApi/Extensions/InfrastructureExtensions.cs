@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using QuotesApi.Data;
 using QuotesApi.Repositories;
 using QuotesApi.Services;
@@ -15,7 +16,16 @@ public static class InfrastructureExtensions
             ?? "Data Source=quotes.db";
 
         services.AddDbContext<QuoteDbContext>(options =>
-            options.UseSqlite(connectionString));
+            options
+                .UseSqlite(connectionString)
+                .EnableSensitiveDataLogging()
+                .LogTo(
+                    Console.WriteLine,
+                    new[]
+                    {
+                        DbLoggerCategory.Database.Command.Name
+                    },
+                    LogLevel.Information));
 
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<ICollectionRepository, CollectionRepository>();

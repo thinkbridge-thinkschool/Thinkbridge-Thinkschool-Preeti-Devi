@@ -1,0 +1,8 @@
+Query: SELECT q.Id, q.Author, q.AuthorId, q.Text FROM Quotes AS q WHERE q.AuthorId = 1 ORDER BY q.Id;
+
+Execution plan:
+QUERY PLAN
+--SCAN q
+
+Interpretation:
+SQLite performs a full table scan because the Quotes.AuthorId index is intentionally absent.
