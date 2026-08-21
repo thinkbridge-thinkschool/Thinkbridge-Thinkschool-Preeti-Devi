@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuotesApi.Data;
 
@@ -10,9 +11,11 @@ using QuotesApi.Data;
 namespace QuotesApi.Migrations
 {
     [DbContext(typeof(QuoteDbContext))]
-    partial class QuoteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260821042612_AddAuthorsForDay11")]
+    partial class AddAuthorsForDay11
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
@@ -30,7 +33,7 @@ namespace QuotesApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Authors", (string)null);
+                    b.ToTable("Authors");
                 });
 
             modelBuilder.Entity("QuotesApi.Models.Collection", b =>
@@ -50,7 +53,7 @@ namespace QuotesApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Collections", (string)null);
+                    b.ToTable("Collections");
                 });
 
             modelBuilder.Entity("QuotesApi.Models.Quote", b =>
@@ -74,7 +77,7 @@ namespace QuotesApi.Migrations
 
                     b.HasIndex("AuthorId");
 
-                    b.ToTable("Quotes", (string)null);
+                    b.ToTable("Quotes");
                 });
 
             modelBuilder.Entity("QuotesApi.Models.Collection", b =>
@@ -93,7 +96,7 @@ namespace QuotesApi.Migrations
 
                             b1.HasKey("CollectionId", "QuoteId");
 
-                            b1.ToTable("CollectionItem", (string)null);
+                            b1.ToTable("CollectionItem");
 
                             b1.WithOwner()
                                 .HasForeignKey("CollectionId");

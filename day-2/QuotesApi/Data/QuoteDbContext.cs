@@ -7,10 +7,30 @@ public class QuoteDbContext(DbContextOptions<QuoteDbContext> options)
     : DbContext(options)
 {
     public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<Author> Authors => Set<Author>();
     public DbSet<Collection> Collections => Set<Collection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Author>(b =>
+        {
+            b.Property(a => a.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<Quote>(b =>
+        {
+            b.HasOne(q => q.AuthorEntity)
+                .WithMany(a => a.Quotes)
+                .HasForeignKey(q => q.AuthorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Intentionally do not configure an index on AuthorId.
+            // Day 11 uses this relationship to demonstrate the
+            // performance impact of a missing foreign-key index.
+        });
+
         modelBuilder.Entity<Collection>(b =>
         {
             b.Property(c => c.Name).HasMaxLength(80);

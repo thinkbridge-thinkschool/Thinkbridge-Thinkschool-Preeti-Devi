@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Models.Dtos;
 using QuotesApi.Repositories;
@@ -126,6 +128,47 @@ public static class QuoteEndpointExtensions
             return deleted
                 ? Results.NoContent()
                 : Results.NotFound();
+        });
+
+        // Day 11 deliberately slow endpoint.
+        //
+        // This demonstrates an N+1 query pattern:
+        // one query loads all authors, followed by one quote query
+        // for each author.
+        //
+        // With 100 authors, one request produces approximately
+        // 101 database queries.
+        //
+        // The Quotes.AuthorId column intentionally has no database
+        // index in the benchmark database.
+        group.MapGet("/slow-authors", async (
+            QuoteDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            var authors = await db.Authors
+                .AsNoTracking()
+                .OrderBy(a => a.Id)
+                .ToListAsync(cancellationToken);
+
+            var results = new List<object>(authors.Count);
+
+            foreach (var author in authors)
+            {
+                var quotes = await db.Quotes
+                    .AsNoTracking()
+                    .Where(q => q.AuthorId == author.Id)
+                    .OrderBy(q => q.Id)
+                    .ToListAsync(cancellationToken);
+
+                results.Add(new
+                {
+                    author.Id,
+                    author.Name,
+                    QuoteCount = quotes.Count
+                });
+            }
+
+            return Results.Ok(results);
         });
 
         return endpoints;
