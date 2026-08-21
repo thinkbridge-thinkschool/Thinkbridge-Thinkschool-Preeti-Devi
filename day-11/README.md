@@ -65,3 +65,60 @@ FROM "Quotes" AS "q"
 WHERE "q"."AuthorId" = @author\_Id
 
 ORDER BY "q"."Id";
+
+
+
+Optimization Results
+
+
+
+&#x20;Before
+
+
+
+\- p50: 114.75 ms
+
+\- p99: 155.99 ms
+
+\- Execution plan: 'SCAN q'
+
+\- Problem: N+1 query pattern and missing 'AuthorId' index.
+
+
+
+Changes Made
+
+
+
+1\. Eliminated the N+1 query pattern using an EF Core projection.
+
+2\. Added an index on 'Quotes.AuthorId'.
+
+3\. Re-ran the same k6 load test with 10 VUs for 30 seconds.
+
+
+
+After
+
+
+
+\- p50: 2.36 ms
+
+\- p99: 4.57 ms
+
+\- HTTP failures: 0%
+
+\- Execution plan: 'SEARCH q USING INDEX IX\_Quotes\_AuthorId (AuthorId=?)'
+
+
+
+Improvement
+
+
+
+p99 improved from 155.99 ms → 4.57 ms, which is approximately a 34.1× improvement.
+
+
+
+The required 10× improvement target was achieved.
+
