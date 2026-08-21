@@ -93,7 +93,9 @@ public static class QuoteEndpointExtensions
                 created.Id,
                 created.Author);
 
-            return Results.Created($"/api/quotes/{created.Id}", created);
+            return Results.Created(
+                $"/api/quotes/{created.Id}",
+                created);
         });
 
         group.MapGet("/{id:int}", async (
@@ -130,17 +132,15 @@ public static class QuoteEndpointExtensions
                 : Results.NotFound();
         });
 
-        // Day 11 deliberately slow endpoint.
+        // Day 11 optimized endpoint.
         //
-        // This demonstrates an N+1 query pattern:
-        // one query loads all authors, followed by one quote query
-        // for each author.
+        // The original implementation used an N+1 query pattern:
+        // one query loaded all authors, followed by one quote query
+        // for every author.
         //
-        // With 100 authors, one request produces approximately
-        // 101 database queries.
-        //
-        // The Quotes.AuthorId column intentionally has no database
-        // index in the benchmark database.
+        // This version uses projection so EF Core can calculate the
+        // quote count as part of the database query instead of
+        // loading quotes separately for every author.
         group.MapGet("/slow-authors", async (
             QuoteDbContext db,
             CancellationToken cancellationToken) =>
@@ -148,27 +148,15 @@ public static class QuoteEndpointExtensions
             var authors = await db.Authors
                 .AsNoTracking()
                 .OrderBy(a => a.Id)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Name,
+                    QuoteCount = a.Quotes.Count()
+                })
                 .ToListAsync(cancellationToken);
 
-            var results = new List<object>(authors.Count);
-
-            foreach (var author in authors)
-            {
-                var quotes = await db.Quotes
-                    .AsNoTracking()
-                    .Where(q => q.AuthorId == author.Id)
-                    .OrderBy(q => q.Id)
-                    .ToListAsync(cancellationToken);
-
-                results.Add(new
-                {
-                    author.Id,
-                    author.Name,
-                    QuoteCount = quotes.Count
-                });
-            }
-
-            return Results.Ok(results);
+            return Results.Ok(authors);
         });
 
         return endpoints;

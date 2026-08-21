@@ -26,9 +26,9 @@ public class QuoteDbContext(DbContextOptions<QuoteDbContext> options)
                 .HasForeignKey(q => q.AuthorId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Intentionally do not configure an index on AuthorId.
-            // Day 11 uses this relationship to demonstrate the
-            // performance impact of a missing foreign-key index.
+            // Day 11 optimization:
+            // Add an index because queries filter Quotes by AuthorId.
+            b.HasIndex(q => q.AuthorId);
         });
 
         modelBuilder.Entity<Collection>(b =>
