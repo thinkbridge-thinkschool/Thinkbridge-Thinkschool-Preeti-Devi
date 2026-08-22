@@ -1,0 +1,15 @@
+===== EF Core =====
+Iterations: 1000
+Average:    1.457 ms
+p95:        2.112 ms
+p99:        2.97 ms
+
+===== Dapper =====
+Iterations: 1000
+Average:    0.64 ms
+p95:        0.861 ms
+p99:        1.112 ms
+
+===== Comparison =====
+Average improvement: 56.08%
+p99 improvement:     62.56%
