@@ -1,0 +1,14 @@
+[
+  { "id": 1, "author": "Marcus Aurelius", "authorId": null, "authorEntity": null, "text": "The happiness of your life depends upon the quality of your thoughts." },
+  { "id": 2, "author": "Seneca", "authorId": null, "authorEntity": null, "text": "We suffer more often in imagination than in reality." },
+  { "id": 3, "author": "Epictetus", "authorId": null, "authorEntity": null, "text": "It is not what happens to you, but how you react to it that matters." },
+  { "id": 4, "author": "Marcus Aurelius", "authorId": null, "authorEntity": null, "text": "Very little is needed to make a happy life; it is all within yourself, in your way of thinking." },
+  { "id": 5, "author": "Seneca", "authorId": null, "authorEntity": null, "text": "Luck is what happens when preparation meets opportunity." },
+  { "id": 6, "author": "Epictetus", "authorId": null, "authorEntity": null, "text": "First say to yourself what you would be; and then do what you have to do." },
+  { "id": 7, "author": "Marcus Aurelius", "authorId": null, "authorEntity": null, "text": "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth." },
+  { "id": 8, "author": "Seneca", "authorId": null, "authorEntity": null, "text": "It is not that we have a short time to live, but that we waste a great deal of it." },
+  { "id": 9, "author": "Epictetus", "authorId": null, "authorEntity": null, "text": "No man is free who is not master of himself." },
+  { "id": 10, "author": "Marcus Aurelius", "authorId": null, "authorEntity": null, "text": "Waste no more time arguing about what a good man should be. Be one." },
+  { "id": 11, "author": "Seneca", "authorId": null, "authorEntity": null, "text": "Difficulties strengthen the mind, as labor does the body." },
+  { "id": 12, "author": "Epictetus", "authorId": null, "authorEntity": null, "text": "Only the educated are free." }
+]
