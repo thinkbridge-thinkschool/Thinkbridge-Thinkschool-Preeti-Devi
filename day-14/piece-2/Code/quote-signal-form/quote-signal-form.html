@@ -1,0 +1,224 @@
+<div class="quotes-page">
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <span class="brand-icon">⚡</span>
+        <div>
+          <h1 class="brand-title">Quotes Studio <span class="badge-preview">Signal Forms</span></h1>
+          <p class="brand-subtitle">Angular Signal-Driven Forms Preview Architecture</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="nav-btn" (click)="scrollToFeed()">
+          📜 Live Feed ({{ quotesList().length }})
+        </button>
+        <button class="nav-btn-secondary" (click)="goToLogin()">
+          🔐 Login
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-grid">
+      <section class="form-container" aria-labelledby="form-heading">
+        <div class="card-header">
+          <div class="badge">Create New Quote</div>
+          <h2 id="form-heading" class="form-title">Inspire the World</h2>
+          <p class="form-description">
+            Share timeless wisdom directly with our real Week-1 Quotes backend API (<code>POST /api/quotes/</code>).
+          </p>
+        </div>
+
+        @if (formState() === 'success' && createdQuote()) {
+          <div class="alert alert-success" role="alert">
+            <div class="alert-icon">✨</div>
+            <div class="alert-body">
+              <h3 class="alert-title">Quote Published Successfully!</h3>
+              <p class="alert-subtitle">Assigned Database ID: #{{ createdQuote()?.id }}</p>
+              <blockquote class="created-quote-preview">
+                "{{ createdQuote()?.text }}"
+                <footer>— <strong>{{ createdQuote()?.author }}</strong></footer>
+              </blockquote>
+              <div class="alert-actions">
+                <button type="button" class="btn btn-primary" (click)="resetForm()">
+                  ✍️ Add Another Quote
+                </button>
+                <button type="button" class="btn btn-ghost" (click)="scrollToFeed()">
+                  View in Feed &darr;
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (formState() === 'error' && serverError()) {
+          <div class="alert alert-error" role="alert">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-body">
+              <h3 class="alert-title">Failed to Create Quote</h3>
+              <p class="alert-message">{{ serverError() }}</p>
+            </div>
+          </div>
+        }
+
+        <form (ngSubmit)="onSubmit()" novalidate class="quote-form" #formEl>
+          <div class="form-group" [class.has-error]="isAuthorInvalid()">
+            <div class="label-row">
+              <label for="author-input" class="form-label">
+                Author Name <span class="required" aria-hidden="true">*</span>
+              </label>
+              <span class="char-count" [class.limit-reached]="authorCharCount() > 100">
+                {{ authorCharCount() }}/100
+              </span>
+            </div>
+
+            <div class="input-wrapper">
+              <input
+                #authorInput
+                id="author-input"
+                type="text"
+                class="form-control"
+                [value]="author()"
+                (input)="onAuthorInput($any($event.target).value)"
+                (blur)="onAuthorBlur()"
+                placeholder="e.g. Marcus Aurelius"
+                [attr.aria-invalid]="isAuthorInvalid()"
+                [attr.aria-describedby]="isAuthorInvalid() ? 'author-error' : null"
+                [disabled]="formState() === 'submitting'"
+                autocomplete="off"
+              />
+            </div>
+
+            @if (isAuthorInvalid() && authorErrors()) {
+              <div id="author-error" class="error-feedback" role="alert">
+                @if (authorErrors()?.required) {
+                  <span>Author name is required.</span>
+                }
+                @if (authorErrors()?.maxlength) {
+                  <span>Author cannot exceed 100 characters (currently {{ authorErrors()?.maxlength?.actualLength }}).</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="form-group" [class.has-error]="isTextInvalid()">
+            <div class="label-row">
+              <label for="quote-text-input" class="form-label">
+                Quote Text <span class="required" aria-hidden="true">*</span>
+              </label>
+              <span class="char-count" [class.limit-reached]="textCharCount() > 500">
+                {{ textCharCount() }}/500
+              </span>
+            </div>
+
+            <div class="input-wrapper">
+              <textarea
+                #textInput
+                id="quote-text-input"
+                class="form-control textarea"
+                rows="4"
+                [value]="text()"
+                (input)="onTextInput($any($event.target).value)"
+                (blur)="onTextBlur()"
+                placeholder="Share an insightful thought or quotation (minimum 10 characters)..."
+                [attr.aria-invalid]="isTextInvalid()"
+                [attr.aria-describedby]="isTextInvalid() ? 'text-error' : null"
+                [disabled]="formState() === 'submitting'"
+              ></textarea>
+            </div>
+
+            @if (isTextInvalid() && textErrors()) {
+              <div id="text-error" class="error-feedback" role="alert">
+                @if (textErrors()?.required) {
+                  <span>Quote text is required.</span>
+                }
+                @if (textErrors()?.minlength) {
+                  <span>Must be at least 10 characters (currently {{ textErrors()?.minlength?.actualLength }}).</span>
+                }
+                @if (textErrors()?.maxlength) {
+                  <span>Quote cannot exceed 500 characters (currently {{ textErrors()?.maxlength?.actualLength }}).</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="signal-inspector" aria-label="Signal Form Debug Bar">
+            <span class="inspector-badge" [class.is-valid]="isValid()" [class.is-invalid]="!isValid()">
+              {{ isValid() ? 'Valid' : 'Invalid' }}
+            </span>
+            <span class="inspector-badge" [class.is-dirty]="isDirty()">
+              {{ isPristine() ? 'Pristine' : 'Dirty' }}
+            </span>
+            <span class="inspector-badge">
+              Touched: {{ authorTouched() || textTouched() ? 'Yes' : 'No' }}
+            </span>
+            <span class="inspector-badge">
+              State: {{ formState() }}
+            </span>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn-submit"
+              [disabled]="formState() === 'submitting'"
+            >
+              @if (formState() === 'submitting') {
+                <span class="spinner" aria-hidden="true"></span>
+                <span>Submitting to API...</span>
+              } @else {
+                <span>Publish Quote</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="btn btn-reset"
+              (click)="resetForm()"
+              [disabled]="formState() === 'submitting' || isPristine()"
+            >
+              Reset
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section #feedSection class="feed-container" aria-labelledby="feed-heading">
+        <div class="feed-header">
+          <div>
+            <h2 id="feed-heading" class="feed-title">Quotes Stream</h2>
+            <p class="feed-subtitle">Live sync from Week-1 QuotesApi database</p>
+          </div>
+          <button class="btn btn-refresh" (click)="loadQuotes()" [disabled]="isLoadingQuotes()">
+            {{ isLoadingQuotes() ? 'Refreshing...' : '🔄 Refresh' }}
+          </button>
+        </div>
+
+        @if (isLoadingQuotes() && quotesList().length === 0) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Fetching quotes from backend...</p>
+          </div>
+        } @else if (quotesList().length === 0) {
+          <div class="empty-state">
+            <span class="empty-icon">💡</span>
+            <h3>No Quotes Yet</h3>
+            <p>Be the first to submit a quote using the signal form!</p>
+          </div>
+        } @else {
+          <div class="quotes-grid">
+            @for (quote of quotesList(); track quote.id) {
+              <article class="quote-card">
+                <p class="quote-text">"{{ quote.text }}"</p>
+                <div class="quote-meta">
+                  <span class="quote-author">— {{ quote.author }}</span>
+                  <span class="quote-id">#{{ quote.id }}</span>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+    </div>
+  </main>
+</div>
