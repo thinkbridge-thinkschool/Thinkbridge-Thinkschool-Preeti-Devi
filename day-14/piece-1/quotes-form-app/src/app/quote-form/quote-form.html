@@ -1,0 +1,177 @@
+<div class="page-wrapper">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <div class="nav-logo">
+        <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="12" fill="rgba(139, 92, 246, 0.2)" />
+          <path d="M14 18C14 16.9 14.9 16 16 16H32C33.1 16 34 16.9 34 18V30C34 31.1 33.1 32 32 32H16C14.9 32 14 31.1 14 30V18Z" stroke="#8b5cf6" stroke-width="2.5" />
+          <path d="M20 22L24 26L28 22" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <span class="nav-title">QuoteVault</span>
+    </div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn nav-btn--ghost" (click)="loadQuotes()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        Refresh Feed
+      </button>
+      <button type="button" class="nav-btn nav-btn--outline" (click)="goToLogin()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Log Out / Switch User
+      </button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- Form Container -->
+    <section class="form-container">
+      <div class="card-header">
+        <h1>Create a Quote</h1>
+        <p class="card-subtitle">Share your words of wisdom with the community</p>
+      </div>
+
+      @if (formState() === 'success') {
+        <div class="success-banner" role="alert">
+          <div class="success-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <p class="success-banner__title">Quote Saved & Published Successfully!</p>
+          @if (createdQuote(); as quote) {
+            <blockquote class="success-banner__quote">"{{ quote.text }}"</blockquote>
+            <p class="success-banner__author">— {{ quote.author }}</p>
+          }
+          <div class="banner-actions">
+            <button type="button" class="btn btn--secondary" (click)="resetForm()">
+              + Create Another Quote
+            </button>
+            <button type="button" class="btn btn--primary" (click)="scrollToFeed()">
+              View in Feed Below ↓
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (formState() === 'error') {
+        <div class="error-banner" role="alert" id="server-error">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ serverError() }}</span>
+        </div>
+      }
+
+      @if (formState() !== 'success') {
+        <form [formGroup]="quoteForm" (ngSubmit)="onSubmit()" novalidate>
+          <div class="form-field">
+            <label for="author-input">Author Name</label>
+            <input
+              id="author-input"
+              #authorInput
+              type="text"
+              formControlName="author"
+              placeholder="e.g. Maya Angelou, Seneca, Alan Turing"
+              [attr.aria-invalid]="isFieldInvalid('author')"
+              [attr.aria-describedby]="isFieldInvalid('author') ? 'author-error' : null"
+              autocomplete="off"
+            />
+            @if (isFieldInvalid('author')) {
+              <div id="author-error" class="field-error" role="alert">
+                @if (authorErrors?.['required']) {
+                  <span>Author is required.</span>
+                } @else if (authorErrors?.['maxlength']) {
+                  <span>Author must be 100 characters or fewer.</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="text-input">Quote Text</label>
+            <textarea
+              id="text-input"
+              #textInput
+              formControlName="text"
+              rows="4"
+              placeholder="Write the quote here (minimum 10 characters)..."
+              [attr.aria-invalid]="isFieldInvalid('text')"
+              [attr.aria-describedby]="isFieldInvalid('text') ? 'text-error' : null"
+            ></textarea>
+            @if (isFieldInvalid('text')) {
+              <div id="text-error" class="field-error" role="alert">
+                @if (textErrors?.['required']) {
+                  <span>Quote text is required.</span>
+                } @else if (textErrors?.['minlength']) {
+                  <span>Quote text must be at least 10 characters.</span>
+                } @else if (textErrors?.['maxlength']) {
+                  <span>Quote text must be 500 characters or fewer.</span>
+                }
+              </div>
+            }
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn--primary"
+            [disabled]="formState() === 'submitting'"
+          >
+            @if (formState() === 'submitting') {
+              <span class="btn-spinner"></span>
+              Submitting Quote…
+            } @else {
+              Publish Quote
+            }
+          </button>
+        </form>
+      }
+    </section>
+
+    <!-- Quotes Feed / List Section -->
+    <section class="quotes-feed-section" #feedSection id="quotes-feed">
+      <div class="feed-header">
+        <div>
+          <h2>Saved Quotes Feed</h2>
+          <p class="feed-subtitle">Live database collection ({{ quotesList().length }} quotes available)</p>
+        </div>
+      </div>
+
+      @if (isLoadingQuotes()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Fetching quotes from backend database...</p>
+        </div>
+      } @else if (quotesList().length === 0) {
+        <div class="empty-feed">
+          <p>No quotes saved yet. Use the form above to add the first quote!</p>
+        </div>
+      } @else {
+        <div class="quotes-grid">
+          @for (quote of quotesList(); track quote.id) {
+            <article class="quote-card" [class.quote-card--highlight]="createdQuote()?.id === quote.id">
+              @if (createdQuote()?.id === quote.id) {
+                <div class="new-badge">✨ Just Created</div>
+              }
+              <div class="quote-card__quote-mark">“</div>
+              <p class="quote-card__text">{{ quote.text }}</p>
+              <div class="quote-card__footer">
+                <span class="quote-card__author">— {{ quote.author }}</span>
+                <span class="quote-card__id">#{{ quote.id }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</div>

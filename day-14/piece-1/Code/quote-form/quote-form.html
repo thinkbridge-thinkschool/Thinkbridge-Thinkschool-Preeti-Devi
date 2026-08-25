@@ -1,0 +1,83 @@
+<section class="form-container">
+  <h1>Create a Quote</h1>
+
+  @if (formState() === 'success') {
+    <div class="success-banner" role="alert">
+      <p class="success-banner__title">Quote created successfully!</p>
+      @if (createdQuote(); as quote) {
+        <blockquote class="success-banner__quote">"{{ quote.text }}"</blockquote>
+        <p class="success-banner__author">— {{ quote.author }}</p>
+      }
+      <button type="button" class="btn btn--secondary" (click)="resetForm()">
+        Create Another
+      </button>
+    </div>
+  }
+
+  @if (formState() === 'error') {
+    <div class="error-banner" role="alert" id="server-error">
+      {{ serverError() }}
+    </div>
+  }
+
+  @if (formState() !== 'success') {
+    <form [formGroup]="quoteForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="form-field">
+        <label for="author-input">Author</label>
+        <input
+          id="author-input"
+          #authorInput
+          type="text"
+          formControlName="author"
+          [attr.aria-invalid]="isFieldInvalid('author')"
+          [attr.aria-describedby]="isFieldInvalid('author') ? 'author-error' : null"
+          autocomplete="off"
+        />
+        @if (isFieldInvalid('author')) {
+          <div id="author-error" class="field-error" role="alert">
+            @if (authorErrors?.['required']) {
+              <span>Author is required.</span>
+            } @else if (authorErrors?.['maxlength']) {
+              <span>Author must be 100 characters or fewer.</span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="text-input">Quote Text</label>
+        <textarea
+          id="text-input"
+          #textInput
+          formControlName="text"
+          rows="4"
+          [attr.aria-invalid]="isFieldInvalid('text')"
+          [attr.aria-describedby]="isFieldInvalid('text') ? 'text-error' : null"
+        ></textarea>
+        @if (isFieldInvalid('text')) {
+          <div id="text-error" class="field-error" role="alert">
+            @if (textErrors?.['required']) {
+              <span>Quote text is required.</span>
+            } @else if (textErrors?.['minlength']) {
+              <span>Quote text must be at least 10 characters.</span>
+            } @else if (textErrors?.['maxlength']) {
+              <span>Quote text must be 500 characters or fewer.</span>
+            }
+          </div>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="formState() === 'submitting'"
+      >
+        @if (formState() === 'submitting') {
+          Submitting…
+        } @else {
+          Create Quote
+        }
+      </button>
+    </form>
+  }
+</section>

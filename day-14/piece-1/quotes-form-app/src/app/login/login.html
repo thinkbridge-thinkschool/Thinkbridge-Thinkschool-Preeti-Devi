@@ -1,0 +1,194 @@
+<div class="login-page">
+  <!-- Left Panel: Animated Quote Showcase -->
+  <div class="login-panel-left">
+    <div class="panel-left-overlay"></div>
+    <div class="floating-orbs">
+      <div class="orb orb--1"></div>
+      <div class="orb orb--2"></div>
+      <div class="orb orb--3"></div>
+    </div>
+
+    <div class="brand-area">
+      <div class="brand-logo">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="12" fill="rgba(255,255,255,0.15)" />
+          <path d="M14 18C14 16.9 14.9 16 16 16H32C33.1 16 34 16.9 34 18V30C34 31.1 33.1 32 32 32H16C14.9 32 14 31.1 14 30V18Z" stroke="white" stroke-width="2" />
+          <path d="M20 22L24 26L28 22" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h1 class="brand-name">QuoteVault</h1>
+      <p class="brand-tagline">Your curated collection of wisdom</p>
+    </div>
+
+    <div class="quote-carousel">
+      @for (quote of floatingQuotes; track $index) {
+        <div class="carousel-quote" [class.carousel-quote--active]="activeQuoteIndex() === $index">
+          <div class="quote-mark">"</div>
+          <blockquote class="carousel-quote__text">{{ quote.text }}</blockquote>
+          <cite class="carousel-quote__author">— {{ quote.author }}</cite>
+        </div>
+      }
+      <div class="carousel-dots">
+        @for (quote of floatingQuotes; track $index) {
+          <button
+            type="button"
+            class="carousel-dot"
+            [class.carousel-dot--active]="activeQuoteIndex() === $index"
+            (click)="activeQuoteIndex.set($index)"
+            [attr.aria-label]="'Go to quote ' + ($index + 1)"
+          ></button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Login Form -->
+  <div class="login-panel-right">
+    <div class="login-form-wrapper">
+      <div class="form-header">
+        <h2 class="form-title">Welcome Back</h2>
+        <p class="form-subtitle">Sign in to continue to your quote collection</p>
+      </div>
+
+      @if (loginState() === 'success') {
+        <div class="success-state" role="alert">
+          <div class="success-checkmark">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="30" stroke="#4ade80" stroke-width="3" />
+              <path d="M20 32L28 40L44 24" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="success-text">Login Successful!</p>
+          <p class="success-subtext">Redirecting you to your quotes...</p>
+        </div>
+      }
+
+      @if (loginState() !== 'success') {
+        @if (loginState() === 'error') {
+          <div class="error-toast" role="alert" id="login-error">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5" />
+              <path d="M10 6V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <circle cx="10" cy="14" r="1" fill="currentColor" />
+            </svg>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate class="login-form">
+          <!-- Email Field -->
+          <div class="input-group" [class.input-group--error]="isFieldInvalid('email')">
+            <label for="login-email" class="input-label">Email Address</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+                <path d="M2 6L10 11L18 6" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+              <input
+                id="login-email"
+                type="email"
+                formControlName="email"
+                placeholder="you@example.com"
+                [attr.aria-invalid]="isFieldInvalid('email')"
+                [attr.aria-describedby]="isFieldInvalid('email') ? 'email-error' : null"
+                autocomplete="email"
+              />
+            </div>
+            @if (isFieldInvalid('email')) {
+              <div id="email-error" class="field-error" role="alert">
+                @if (emailErrors?.['required']) {
+                  <span>Email address is required</span>
+                } @else if (emailErrors?.['email']) {
+                  <span>Please enter a valid email address</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Password Field -->
+          <div class="input-group" [class.input-group--error]="isFieldInvalid('password')">
+            <label for="login-password" class="input-label">Password</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="4" y="8" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
+                <path d="M7 8V5C7 3.34 8.34 2 10 2C11.66 2 13 3.34 13 5V8" stroke="currentColor" stroke-width="1.5" />
+                <circle cx="10" cy="13" r="1.5" fill="currentColor" />
+              </svg>
+              <input
+                id="login-password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="Enter your password"
+                [attr.aria-invalid]="isFieldInvalid('password')"
+                [attr.aria-describedby]="isFieldInvalid('password') ? 'password-error' : null"
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                @if (showPassword()) {
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M3 3L17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M10 5C5 5 2 10 2 10C2 10 3.5 12.5 6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M10 15C15 15 18 10 18 10C18 10 16.5 7.5 14 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                } @else {
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 5C5 5 2 10 2 10C2 10 5 15 10 15C15 15 18 10 18 10C18 10 15 5 10 5Z" stroke="currentColor" stroke-width="1.5" />
+                    <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                }
+              </button>
+            </div>
+            @if (isFieldInvalid('password')) {
+              <div id="password-error" class="field-error" role="alert">
+                @if (passwordErrors?.['required']) {
+                  <span>Password is required</span>
+                } @else if (passwordErrors?.['minlength']) {
+                  <span>Password must be at least 6 characters</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Remember Me & Forgot Password -->
+          <div class="form-options">
+            <label class="checkbox-label" for="remember-me">
+              <input id="remember-me" type="checkbox" formControlName="rememberMe" />
+              <span class="checkbox-custom"></span>
+              <span>Remember me</span>
+            </label>
+            <a href="javascript:void(0)" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            class="login-btn"
+            [disabled]="loginState() === 'submitting'"
+            [class.login-btn--loading]="loginState() === 'submitting'"
+          >
+            @if (loginState() === 'submitting') {
+              <span class="spinner"></span>
+              <span>Signing in...</span>
+            } @else {
+              <span>Sign In</span>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            }
+          </button>
+        </form>
+
+        <!-- Demo Credentials -->
+        <div class="demo-credentials">
+          <p class="demo-label">Demo Credentials</p>
+          <p class="demo-value">admin&#64;quotes.app / admin123</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
