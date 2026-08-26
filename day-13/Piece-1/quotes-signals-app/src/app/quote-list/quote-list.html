@@ -1,0 +1,50 @@
+<section class="quote-list">
+  <header class="quote-list__header">
+    <h1>Quotes</h1>
+    <p class="quote-list__summary">{{ pageSummary() }}</p>
+  </header>
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <p class="quote-list__status" role="status">Loading quotes…</p>
+    }
+    @case ('error') {
+      <p class="quote-list__status quote-list__status--error" role="alert">
+        {{ error() }}
+      </p>
+    }
+    @case ('empty') {
+      <p class="quote-list__status">No quotes found on this page.</p>
+    }
+    @default {
+      <ul class="quote-list__items">
+        @for (quote of quotes(); track quote.id) {
+          <li class="quote-card">
+            <p class="quote-card__text">"{{ quote.text }}"</p>
+            <p class="quote-card__author">— {{ authorLabel(quote) }}</p>
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  @if (viewState() !== 'loading') {
+    <footer class="quote-list__pager">
+      <button type="button" (click)="previousPage()" [disabled]="page() === 1">
+        Previous
+      </button>
+      <span>Page {{ page() }}</span>
+      <button type="button" (click)="nextPage()" [disabled]="viewState() === 'empty'">
+        Next
+      </button>
+      <label class="quote-list__page-size">
+        Page size
+        <select [value]="pageSize()" (change)="onPageSizeChange($event)">
+          @for (size of pageSizeOptions; track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      </label>
+    </footer>
+  }
+</section>

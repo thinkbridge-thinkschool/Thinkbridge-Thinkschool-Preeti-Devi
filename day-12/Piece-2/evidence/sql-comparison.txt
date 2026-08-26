@@ -1,0 +1,20 @@
+EF Core SQL
+
+SELECT "q"."Id", "q"."Author", "q"."Text"
+FROM "Quotes" AS "q"
+WHERE "q"."Id" = @request_Id
+LIMIT 1;
+
+
+Dapper SQL
+
+SELECT
+    Id,
+    Author,
+    Text
+FROM Quotes
+WHERE Id = @Id;
+
+
+Both implementations execute the same logical read:
+retrieve one quote by its Id and return Id, Author, and Text.

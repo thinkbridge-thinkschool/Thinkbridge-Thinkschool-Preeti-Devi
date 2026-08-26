@@ -1,0 +1,76 @@
+<section class="quotes">
+
+  <div class="quotes__list">
+    <h1>Quotes</h1>
+
+    @switch (listState()) {
+      @case ('loading') {
+        <p class="state-msg" role="status">Loading quotes…</p>
+      }
+      @case ('error') {
+        <p class="state-msg state-msg--error" role="alert">{{ listError() }}</p>
+      }
+      @case ('empty') {
+        <p class="state-msg">No quotes on this page.</p>
+      }
+      @case ('loaded') {
+        <ul class="quote-cards">
+          @for (quote of quotes(); track quote.id) {
+            <li
+              class="quote-card"
+              [class.quote-card--selected]="selectedId() === quote.id"
+              (click)="selectQuote(quote.id)"
+            >
+              <p class="quote-card__text">"{{ quote.text }}"</p>
+              <p class="quote-card__author">— {{ authorDisplay(quote) }}</p>
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    @if (listState() !== 'loading') {
+      <div class="pager">
+        <button (click)="previousPage()" [disabled]="page() === 1">Previous</button>
+        <span>Page {{ page() }}</span>
+        <button (click)="nextPage()" [disabled]="listState() === 'empty'">Next</button>
+      </div>
+    }
+  </div>
+
+  @if (selectedId() !== null) {
+    <aside class="quotes__detail">
+      <button class="detail__close" (click)="closeDetail()">✕ Close</button>
+
+      @switch (detailState()) {
+        @case ('loading') {
+          <p class="state-msg" role="status">Loading quote #{{ selectedId() }}…</p>
+        }
+        @case ('not-found') {
+          <p class="state-msg state-msg--error" role="alert">
+            Quote #{{ selectedId() }} not found (404).
+          </p>
+        }
+        @case ('error') {
+          <p class="state-msg state-msg--error" role="alert">{{ detailError() }}</p>
+        }
+        @case ('loaded') {
+          @if (detailQuote(); as quote) {
+            <article class="detail-card">
+              <h2>Quote #{{ quote.id }}</h2>
+              <blockquote class="detail-card__text">"{{ quote.text }}"</blockquote>
+              <p class="detail-card__author">— {{ authorDisplay(quote) }}</p>
+              <dl class="detail-card__meta">
+                <dt>Author ID</dt>
+                <dd>{{ quote.authorId ?? 'N/A' }}</dd>
+                <dt>Author Entity</dt>
+                <dd>{{ quote.authorEntity?.name ?? 'None' }}</dd>
+              </dl>
+            </article>
+          }
+        }
+      }
+    </aside>
+  }
+
+</section>
