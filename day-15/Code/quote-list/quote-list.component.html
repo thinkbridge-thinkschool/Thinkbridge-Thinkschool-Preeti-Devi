@@ -1,0 +1,118 @@
+<div class="quotes-container">
+  <header class="header">
+    <div class="title-group">
+      <h1>Quotes Explorer</h1>
+      <p class="subtitle">HttpClient + Functional Interceptors Demo (Week-1 API Contract)</p>
+    </div>
+
+    <div class="auth-bar">
+      <span class="auth-status">
+        Auth Status:
+        <strong [class.auth-active]="authService.token()" [class.auth-inactive]="!authService.token()">
+          {{ authService.token() ? 'Bearer Token Active' : 'Unauthenticated' }}
+        </strong>
+      </span>
+      <button class="btn btn-outline" (click)="toggleAuth()">
+        {{ authService.token() ? 'Clear Token' : 'Set Mock Token' }}
+      </button>
+    </div>
+  </header>
+
+  
+  <section class="test-actions" aria-label="API Contract Triggers">
+    <div class="controls-group">
+      <div class="param-badge">Page: <strong>{{ currentPage() }}</strong></div>
+      <div class="param-badge">Size: <strong>{{ pageSize() }}</strong></div>
+    </div>
+
+    <div class="buttons-group">
+      <button class="btn btn-primary" (click)="fetchQuotes()">
+        <span class="icon">&#8635;</span> Refresh GET /api/quotes
+      </button>
+      <button class="btn btn-warning" (click)="triggerInvalidPageError()">
+        Trigger 400 (Page=0)
+      </button>
+      <button class="btn btn-warning" (click)="triggerInvalidSizeError()">
+        Trigger 400 (Size=999)
+      </button>
+      <button class="btn btn-secondary" (click)="resetPagination()">
+        Reset Params
+      </button>
+    </div>
+  </section>
+
+  
+  @if (state() === 'loading') {
+    <div class="state-card loading-state" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <p>Fetching quotes from <code>GET /api/quotes?page={{ currentPage() }}&size={{ pageSize() }}</code>...</p>
+    </div>
+  }
+
+  
+  @if (state() === 'error') {
+    <div class="state-card error-state" role="alert">
+      <div class="error-header">
+        <span class="error-badge">HTTP {{ currentError()?.status }}</span>
+        <h3>{{ currentError()?.title }}</h3>
+      </div>
+      <p class="error-message">
+        <strong>Friendly Message:</strong> {{ currentError()?.userMessage }}
+      </p>
+
+      @if (currentError()?.validationErrors && (currentError()?.validationErrors | keyvalue)?.length) {
+        <div class="field-errors">
+          <p class="field-errors-title">Server Validation Errors (ASP.NET Core RFC 7807):</p>
+          <ul>
+            @for (err of currentError()?.validationErrors | keyvalue; track err.key) {
+              <li><code>{{ err.key }}</code>: {{ err.value.join(', ') }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="error-actions">
+        <button class="btn btn-primary" (click)="resetPagination()">Fix Parameters &amp; Retry</button>
+      </div>
+    </div>
+  }
+
+  
+  @if (state() === 'empty') {
+    <div class="state-card empty-state">
+      <div class="empty-icon">&#128221;</div>
+      <h3>No Quotes Found</h3>
+      <p>No quotes returned for page {{ currentPage() }} with page size {{ pageSize() }}.</p>
+      <button class="btn btn-primary" (click)="resetPagination()">Return to Page 1</button>
+    </div>
+  }
+
+  
+  @if (state() === 'success') {
+    <div class="quotes-grid">
+      @for (quote of quotes(); track quote.id) {
+        <article class="quote-card">
+          <div class="quote-card-header">
+            <span class="quote-id">Quote #{{ quote.id }}</span>
+          </div>
+          <blockquote class="quote-text">
+            &ldquo;{{ quote.text }}&rdquo;
+          </blockquote>
+          <footer class="quote-author">
+            &mdash; <strong>{{ quote.author }}</strong>
+          </footer>
+        </article>
+      }
+    </div>
+
+    <nav class="pagination-bar" aria-label="Quotes Pagination">
+      <button class="btn btn-secondary" [disabled]="currentPage() <= 1" (click)="prevPage()">
+        &larr; Previous Page
+      </button>
+      <span class="page-indicator">Page {{ currentPage() }}</span>
+      <button class="btn btn-secondary" (click)="nextPage()">
+        Next Page &rarr;
+      </button>
+    </nav>
+  }
+</div>
