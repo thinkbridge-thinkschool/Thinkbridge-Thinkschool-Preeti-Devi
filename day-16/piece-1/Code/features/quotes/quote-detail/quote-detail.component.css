@@ -1,0 +1,214 @@
+.detail-container {
+  max-width: 760px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+.nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.btn-back {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateX(-3px);
+}
+
+.route-badge {
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.75rem;
+}
+
+.quote-id-tag {
+  background: #0ea5e9;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.detail-quote-text {
+  font-size: 1.65rem;
+  line-height: 1.5;
+  color: #1e293b;
+  font-style: italic;
+  margin: 0 0 2rem 0;
+  font-weight: 400;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1.25rem;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.author-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.creator-info {
+  text-align: right;
+}
+
+.meta-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.meta-value {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+/* State Cards */
+.state-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2.5rem;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.error-card {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+}
+
+.error-message {
+  color: #991b1b;
+  margin-bottom: 1.5rem;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.btn-retry {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #334155;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Skeletons */
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 15%;
+  background: #e2e8f0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-text {
+  height: 30px;
+  width: 90%;
+  background: #e2e8f0;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-text.short {
+  width: 60%;
+}
+
+.skeleton-meta {
+  height: 24px;
+  width: 30%;
+  background: #e2e8f0;
+  border-radius: 4px;
+  margin-top: 1rem;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
