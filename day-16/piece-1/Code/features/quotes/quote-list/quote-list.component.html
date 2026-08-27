@@ -1,0 +1,100 @@
+<div class="quotes-page">
+  <header class="page-header">
+    <div class="header-main">
+      <h1>Quotes Collection</h1>
+      <p class="subtitle">Real-time quotes powered by ASP.NET Core Week-1 API</p>
+    </div>
+    <div class="auth-bar">
+      <a routerLink="/quotes/new" class="btn-new-quote" id="new-quote-link">+ New Quote</a>
+      @if (authService.isAuthenticated()) {
+        <span class="auth-status active">&#9679; Authenticated</span>
+        <button (click)="logout()" class="btn-logout" id="logout-btn">Log Out</button>
+      } @else {
+        <span class="auth-status" id="anon-status">&#9675; Browsing anonymously</span>
+        <a routerLink="/login" class="btn-login-link" id="login-link">Log In</a>
+      }
+    </div>
+  </header>
+
+  @if (state() === 'success' || state() === 'empty') {
+    <div class="filter-bar">
+      <label for="filter-input" class="sr-only">Filter quotes by author or text</label>
+      <input
+        id="filter-input"
+        type="search"
+        placeholder="Filter by author or text…"
+        [value]="filter()"
+        (input)="onFilterInput($any($event.target).value)"
+      />
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (state() === 'loading') {
+    <div class="skeleton-list" id="list-loading-state">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (state() === 'error') {
+    <div class="error-banner" id="list-error-state">
+      <p>{{ errorMessage() }}</p>
+      <button (click)="fetchQuotes()" class="btn-retry" id="retry-list-btn">Retry Fetch</button>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (state() === 'empty') {
+    <div class="empty-state" id="list-empty-state">
+      <p>No quotes found for this page.</p>
+    </div>
+  }
+
+  <!-- Quotes List with View Transitions -->
+  @if (state() === 'success') {
+    @if (filteredQuotes().length === 0) {
+      <div class="empty-state" id="list-filter-empty-state">
+        <p>No quotes match &ldquo;{{ filter() }}&rdquo; on this page.</p>
+      </div>
+    }
+    <div class="quotes-grid">
+      @for (quote of filteredQuotes(); track quote.id) {
+        <a
+          [routerLink]="['/quotes', quote.id]"
+          queryParamsHandling="preserve"
+          class="quote-card-link"
+          id="quote-card-{{ quote.id }}"
+        >
+          <div class="quote-card" [style.view-transition-name]="'quote-card-' + quote.id">
+            <div class="card-top">
+              <span class="quote-id">#{{ quote.id }}</span>
+              <span class="view-detail-hint">View details &rarr;</span>
+            </div>
+            <p class="quote-text" [style.view-transition-name]="'quote-text-' + quote.id">
+              &ldquo;{{ quote.text }}&rdquo;
+            </p>
+            <div class="quote-footer">
+              <span class="quote-author" [style.view-transition-name]="'quote-author-' + quote.id">
+                &mdash; {{ quote.author }}
+              </span>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+
+    <!-- Pagination -->
+    <footer class="pagination-bar">
+      <button (click)="prevPage()" [disabled]="currentPage() === 1" class="btn-page" id="prev-page-btn">
+        &larr; Prev
+      </button>
+      <span class="page-indicator">Page {{ currentPage() }}</span>
+      <button (click)="nextPage()" class="btn-page" id="next-page-btn">
+        Next &rarr;
+      </button>
+    </footer>
+  }
+</div>

@@ -1,0 +1,57 @@
+<div class="detail-container">
+  <div class="nav-bar">
+    <button (click)="goBack()" class="btn-back" id="back-to-list-btn">
+      &larr; Back to Quotes List
+    </button>
+    <span class="route-badge">Route: /quotes/{{ id }}</span>
+  </div>
+
+  <!-- Loading State -->
+  @if (state() === 'loading') {
+    <div class="state-card loading-card" id="detail-loading-state">
+      <div class="skeleton-title"></div>
+      <div class="skeleton-text"></div>
+      <div class="skeleton-text short"></div>
+      <div class="skeleton-meta"></div>
+    </div>
+  }
+
+  <!-- Error State (404 / 500) -->
+  @if (state() === 'error' || state() === 'invalid_id') {
+    <div class="state-card error-card" id="detail-error-state">
+      <div class="error-icon">&#9888;</div>
+      <h3>Unable to Load Quote</h3>
+      <p class="error-message">{{ errorMessage() }}</p>
+      <div class="error-actions">
+        <button (click)="loadQuote()" class="btn-retry" id="retry-detail-btn">Retry</button>
+        <button (click)="goBack()" class="btn-secondary" id="return-list-btn">Return to List</button>
+      </div>
+    </div>
+  }
+
+  <!-- Success State -->
+  @if (state() === 'success' && quote(); as q) {
+    <article class="detail-card" [style.view-transition-name]="'quote-card-' + q.id" id="quote-detail-view">
+      <header class="detail-header">
+        <span class="quote-id-tag">Quote #{{ q.id }}</span>
+      </header>
+
+      <blockquote class="detail-quote-text" [style.view-transition-name]="'quote-text-' + q.id">
+        &ldquo;{{ q.text }}&rdquo;
+      </blockquote>
+
+      <footer class="detail-footer">
+        <div class="author-info">
+          <span class="author-label">Author</span>
+          <span class="author-name" [style.view-transition-name]="'quote-author-' + q.id">{{ q.author }}</span>
+        </div>
+        @if (q.userId) {
+          <div class="creator-info">
+            <span class="meta-label">Submitted by</span>
+            <span class="meta-value">{{ q.userId }}</span>
+          </div>
+        }
+      </footer>
+    </article>
+  }
+</div>
