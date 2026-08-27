@@ -1,0 +1,82 @@
+<div class="panel">
+  <header class="panel-header">
+    <div>
+      <h1>Quotes — Signals Store Demo</h1>
+      <p class="subtitle">State owned by <code>QuotesStore</code>, not this component.</p>
+    </div>
+    <div class="header-actions">
+      <button (click)="reload()" class="btn-secondary" id="reload-btn">Reload</button>
+      <button (click)="nextPage(); reload()" class="btn-secondary" id="double-load-btn">
+        Trigger concurrent loads
+      </button>
+    </div>
+  </header>
+
+  <section class="create-card">
+    <h2>Create a quote</h2>
+    @if (createState() === 'error') {
+      <div class="error-alert" id="create-error-banner" role="alert">{{ createError() }}</div>
+    }
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <input formControlName="author" placeholder="Author" id="author-input" maxlength="100" />
+      <textarea formControlName="text" placeholder="Quote text" id="text-input" rows="2" maxlength="1000"></textarea>
+      <button type="submit" [disabled]="createState() === 'submitting'" id="submit-quote-btn">
+        {{ createState() === 'submitting' ? 'Creating…' : 'Create (optimistic)' }}
+      </button>
+    </form>
+  </section>
+
+  @if (store.status() === 'loading') {
+    <div class="state-box" id="loading-state">Loading…</div>
+  }
+
+  @if (store.status() === 'error') {
+    <div class="state-box error" id="error-state">{{ store.errorMessage() }}</div>
+  }
+
+  @if (store.status() === 'empty') {
+    <div class="state-box" id="empty-state">No quotes on this page.</div>
+  }
+
+  @if (store.status() === 'loaded' || store.status() === 'loading') {
+    <ul class="quotes-list" id="quotes-list">
+      @for (q of store.quotes(); track q.id) {
+        <li [class.optimistic]="q.id < 0" [class.has-failure]="store.failureFor().has(q.id)" id="quote-{{ q.id }}">
+          <div class="q-row">
+            <span class="q-id">#{{ q.id }}</span>
+            <span class="q-text">&ldquo;{{ q.text }}&rdquo;</span>
+            <span class="q-author">— {{ q.author }}</span>
+            @if (q.id < 0) {
+              <span class="q-pending" title="Optimistic — not yet confirmed by the server">pending</span>
+            }
+            @if (authService.isAuthenticated() && q.id > 0) {
+              <button
+                (click)="deleteQuote(q.id)"
+                class="btn-delete"
+                id="delete-btn-{{ q.id }}"
+              >
+                Delete
+              </button>
+            }
+          </div>
+          @if (store.failureFor().get(q.id); as message) {
+            <p class="delete-failure" id="delete-failure-{{ q.id }}" role="alert">{{ message }}</p>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  @if (!authService.isAuthenticated() && store.quotes().length > 0) {
+    <p class="signed-out-hint" id="signed-out-delete-hint">
+      Sign in to delete a quote — <code>DELETE /api/quotes/&#123;id&#125;</code> needs a token,
+      and only succeeds on quotes you own.
+    </p>
+  }
+
+  <footer class="pagination">
+    <button (click)="prevPage()" [disabled]="page() === 1" id="prev-page-btn">&larr; Prev</button>
+    <span>Page {{ page() }}</span>
+    <button (click)="nextPage()" id="next-page-btn">Next &rarr;</button>
+  </footer>
+</div>
