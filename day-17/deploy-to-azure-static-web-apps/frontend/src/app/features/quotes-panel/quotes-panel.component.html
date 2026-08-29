@@ -9,6 +9,11 @@
       <button (click)="nextPage(); reload()" class="btn-secondary" id="double-load-btn">
         Trigger concurrent loads
       </button>
+      @if (authService.isAuthenticated()) {
+        <button (click)="signOut()" class="btn-secondary" id="logout-btn">Sign out</button>
+      } @else {
+        <a routerLink="/login" class="btn-secondary" id="login-link">Sign in</a>
+      }
     </div>
   </header>
 
