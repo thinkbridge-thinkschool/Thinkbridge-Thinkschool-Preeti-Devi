@@ -51,10 +51,13 @@ repository root, because that is the only place GitHub Actions looks. Any push o
 request touching `day-17/**` runs the frontend tests and production build, the backend
 build and publish, and a parse check over every script. None of that needs a secret.
 
-Deployment is a separate job that stays switched off — reporting `skipped, no token`
-rather than failing — until `AZURE_STATIC_WEB_APPS_API_TOKEN` is added as a repository
-secret. It never runs from a pull request, and it ships the artifact the test job
-produced rather than rebuilding. Setup is in [DEPLOY.md](DEPLOY.md#cicd).
+Deployment is a separate job, wired to the repository secret
+`AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17` — so a push to
+`day17-azure-static-web-apps` that touches `day-17/**` redeploys the live site. It never
+runs from a pull request, and it ships the artifact the test job produced rather than
+rebuilding, so the bytes that go live are the bytes that passed. Deleting the secret
+switches deployment off without editing the workflow: the job then reports
+`skipped, no token` and stays green. Details in [DEPLOY.md](DEPLOY.md#cicd).
 
 ## How the pieces fit
 

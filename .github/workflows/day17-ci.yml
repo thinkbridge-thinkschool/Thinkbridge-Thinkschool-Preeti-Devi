@@ -4,16 +4,17 @@
 # It needs no secrets and no Azure access, so it works on a fork and on a branch that is
 # never merged.
 #
-# CD (deploy to Azure Static Web Apps) is OFF until you add one repository secret:
+# CD (deploy to Azure Static Web Apps) is driven by one repository secret,
+# AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17. To refresh or re-create it, pipe
+# the token straight from Azure into gh so the value never lands in a shell history or a
+# process listing:
 #
-#   az staticwebapp secrets list -n quotes-store-day17 -g rg-day17-swa \
-#     --query "properties.apiKey" -o tsv
-#   gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "<the value above>"
+#   az staticwebapp secrets list -n quotes-store-day17 -g rg-day17-swa --query "properties.apiKey" -o tsv | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17
 #
-# Until that secret exists the deploy job reports "skipped, no token" and stays green
-# rather than failing — adding the secret is the deliberate act that turns CD on. That
-# token authorises uploads to this one Static Web App and nothing else; it is not an
-# Azure credential and grants no access to the API, the proxy, or the subscription.
+# If that secret is ever removed the deploy job reports "skipped, no token" and stays
+# green rather than failing, so CI keeps working without it. The token authorises uploads
+# to this one Static Web App and nothing else; it is not an Azure credential and grants
+# no access to the API, the proxy, or the subscription.
 
 name: Day 17 CI/CD
 
@@ -149,13 +150,13 @@ jobs:
       - name: Is the deployment token configured?
         id: token
         env:
-          SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 }}
         run: |
           if [ -n "$SWA_TOKEN" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Deploy skipped::AZURE_STATIC_WEB_APPS_API_TOKEN is not set, so CD is off. See the header of .github/workflows/day17-ci.yml to turn it on."
+            echo "::notice title=Deploy skipped::AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 is not set, so CD is off. See the header of .github/workflows/day17-ci.yml to turn it on."
           fi
 
       - name: Download the tested bundle
@@ -171,7 +172,7 @@ jobs:
         if: steps.token.outputs.present == 'true'
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 }}
           action: upload
           app_location: bundle
           skip_app_build: true

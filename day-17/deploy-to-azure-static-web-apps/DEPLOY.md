@@ -108,19 +108,29 @@ in the repository root, because that is the only place GitHub Actions looks.
 parse check over every script — runs on any push or pull request touching `day-17/**`.
 It needs no secrets, so it works unchanged on a fork or on a branch that is never merged.
 
-**CD is off until you add one repository secret.** Until then the deploy job reports
-`skipped, no token` and stays green rather than failing; adding the secret is the
-deliberate act that turns deployment on.
+**CD is on.** It is driven by the repository secret
+`AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17`, so **every push to
+`day17-azure-static-web-apps` that touches `day-17/**` redeploys the live site.** To turn
+deployment off again without touching the workflow, delete that secret — the job then
+reports `skipped, no token` and stays green rather than failing, and CI carries on:
+
+```bash
+gh secret delete AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17
+```
+
+To refresh or re-create it, pipe the token straight from Azure into `gh` rather than
+passing it as `--body`, so the value never lands in a shell history or a process listing:
 
 ```bash
 az staticwebapp secrets list -n quotes-store-day17 -g rg-day17-swa \
-  --query "properties.apiKey" -o tsv
-
-gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "<the value above>"
+  --query "properties.apiKey" -o tsv \
+  | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17
 ```
 
 That token authorises uploads to this one Static Web App and nothing else. It is not an
-Azure credential and grants no access to the API, the proxy, or the subscription.
+Azure credential and grants no access to the API, the proxy, or the subscription. The
+Static Web App itself has `provider: SwaCli` and no linked repository, so this workflow
+is the only thing that deploys it.
 
 Two deliberate limits on the deploy job: it never runs from a `pull_request` (a PR build
 runs the head branch's code, so deploying it would let any PR overwrite the live site),
