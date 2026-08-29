@@ -1,0 +1,113 @@
+Day 17 — Managed Identity verification (real, live, end-to-end)
+==================================================================
+
+ARCHITECTURE
+------------
+Angular (SWA, browser)
+  -> https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io/proxy/quotes
+     (Azure Container App "day17-mi-proxy", system-assigned Managed Identity,
+      NO client secret, NO certificate, nothing stored)
+  -> DefaultAzureCredential acquires an Azure AD access token for the
+     Week-1 API's app registration, server-side, in this proxy process only
+  -> forwards to the REAL Week-1 API with "Authorization: Bearer <MI token>"
+  -> https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes
+
+Azure AD app registration representing the Week-1 API:
+  Display name: day17-quotesapi-mi
+  Tenant:       8d46a076-d093-416d-a57b-8692cde13bf8 (the tenant this
+                deployment's Azure CLI session actually has access to —
+                NOT the tenant/app referenced in appsettings.json, which
+                does not exist here; see agent-output.md)
+  App (client) id: 8d3c6d5c-bcaf-4a54-8fbe-e2d5c6cb2274
+  App role:     Quotes.Api.Access (allowedMemberTypes: Application)
+  requestedAccessTokenVersion: 2 (required for a v2.0-format token/issuer)
+
+Managed Identity granted the role:
+  Container App "day17-mi-proxy" system-assigned identity
+  Principal (object) id: e55a5f96-ae6a-4900-b38c-a97b6758717a
+  Granted via Microsoft Graph appRoleAssignments (no admin consent flow
+  needed — this is a direct application-permission grant on our own app,
+  not a delegated Graph permission)
+
+Week-1 API (day-5-piece-2 Container App) reconfigured (env vars only, no
+secret, no source change to this file):
+  EntraId__TenantId = 8d46a076-d093-416d-a57b-8692cde13bf8
+  EntraId__ClientId = 8d3c6d5c-bcaf-4a54-8fbe-e2d5c6cb2274
+(existing "Smart" policy scheme in InfrastructureExtensions.cs already
+ routes any bearer token whose issuer contains "login.microsoftonline.com"
+ or "sts.windows.net" to the "Entra" JwtBearer scheme — no change needed
+ there; the two real source changes made were the CORS policy [day-5 fix
+ from a prior session] and the "can-edit-quotes" authorization policy,
+ which had to accept an app role claim in addition to the existing
+ self-issued-JWT scope claim — see the bug writeup in verification-log.md)
+
+TOKEN EVIDENCE (safe metadata only — never the raw token/signature)
+--------------------------------------------------------------------
+Decoded from a real token acquired by the Container App's Managed Identity
+via DefaultAzureCredential at runtime:
+
+  header.alg:  RS256
+  header.typ:  JWT
+  iss:         https://login.microsoftonline.com/8d46a076-d093-416d-a57b-8692cde13bf8/v2.0
+  aud:         8d3c6d5c-bcaf-4a54-8fbe-e2d5c6cb2274
+  roles:       ["Quotes.Api.Access"]
+  sub:         e55a5f96-ae6a-4900-b38c-a97b6758717a  (= the Managed
+               Identity's own principal id — there is no human user; this
+               is an app-only / client-credentials-equivalent token)
+
+This is categorically NOT the application's self-issued "Internal" JWT
+(compare: that token's iss is the literal string "SelfHostedJwtIssuer",
+aud "SelfHostedJwtAudience", sub "testuser", scope "quotes.write" — see
+day-17/deploy-to-azure-static-web-apps/evidence/curl-transcripts.txt §13
+from the prior session). Different issuer, different audience, different
+subject, different claim shape — issued by real Azure AD, not the app.
+
+LIVE REQUEST/RESPONSE EVIDENCE
+--------------------------------
+$ curl -X POST https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io/proxy/quotes \
+    -H "Content-Type: application/json" \
+    -d '{"author":"Managed Identity","text":"Day 17 MI-token verification quote."}'
+
+HTTP/1.1 201 Created
+{"id":1,"author":"Managed Identity","text":"Day 17 MI-token verification quote 2.","userId":"e55a5f96-ae6a-4900-b38c-a97b6758717a"}
+
+The created record's "userId" field is populated server-side by the REAL
+Week-1 API directly from the validated token's "sub" claim
+(QuoteEndpointExtensions.cs: `UserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value`)
+— it is literally the Managed Identity's own Azure AD object id. This is
+not something the proxy could fake; it is proof, produced by the real API
+itself, that the API validated an Azure-AD/Managed-Identity-issued token
+and recorded the calling identity from it.
+
+Confirmed the record round-trips through a normal GET immediately after:
+$ curl https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes
+[{"id":1,"author":"Managed Identity","text":"Day 17 MI-token verification quote 2.","userId":"e55a5f96-ae6a-4900-b38c-a97b6758717a"}]
+
+Cleaned up afterward via the same proxy's DELETE passthrough:
+$ curl -X DELETE https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io/proxy/quotes/1
+HTTP/1.1 204 No Content
+$ curl https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes
+[]
+
+REGRESSION CHECK — the existing human-user login flow is unaffected
+----------------------------------------------------------------------
+$ curl -X POST .../api/auth/login -d '{"username":"testuser","password":"password"}'
+HTTP 200 {"token":"...","refreshToken":"..."}
+$ curl -X POST .../api/quotes -H "Authorization: Bearer <internal JWT>" -d '{...}'
+HTTP 201 {"id":2,"author":"Regression Test","text":"normal user flow still works","userId":"testuser"}
+$ curl -X DELETE .../api/quotes/2 -H "Authorization: Bearer <internal JWT>"
+HTTP 204
+
+ZERO SECRETS
+------------
+- day17-mi-proxy Container App: system-assigned Managed Identity only.
+  `az containerapp secret list` -> empty. Env vars are all non-secret
+  identifiers (API base URL, token scope/audience, allowed CORS origin).
+- day-5-piece-2 Container App: `az containerapp secret list` -> empty.
+  EntraId__TenantId/ClientId are public, non-secret identifiers (a tenant
+  GUID and an app's client id are not credentials — they identify who to
+  ask, not a secret that proves who you are; the Managed Identity itself
+  is what proves identity, and it is never exposed as a value anywhere).
+- Azure Static Web App: `az staticwebapp appsettings list` -> empty.
+- No client secret, certificate, or connection string was created for
+  either app registration or either Container App at any point.

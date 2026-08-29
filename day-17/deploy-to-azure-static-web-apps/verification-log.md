@@ -3,12 +3,13 @@
 ## Live URLs
 
 - SWA (production): `https://delightful-smoke-0b2c56200.7.azurestaticapps.net`
-- Custom domain: none (see deployment-brief.md — none was found/available; intentionally skipped, not invented)
+- Custom domain: **not configured** — genuinely blocked (no domain owned/available; see deployment-brief.md for the exact command + DNS records needed once one exists). Not invented.
 - Real Week-1 API: `https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io`
+- Managed Identity proxy: `https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io`
 
 ## Lighthouse (real production URL — full detail in `evidence/lighthouse-summary.txt`)
 
-Final result (mobile/default preset, `evidence/lighthouse-report.report.json` / `.html`):
+Final result, re-run this round (`evidence/lighthouse-final.report.json` / `.html`):
 
 | Category | Score |
 |---|---|
@@ -18,78 +19,96 @@ Final result (mobile/default preset, `evidence/lighthouse-report.report.json` / 
 | SEO | 100 |
 | **Average** | **98** |
 
-Cross-checked with `--preset=desktop` (`evidence/lighthouse-report-desktop.report.*`) — identical scores, ruling out mobile-CPU throttling as the cause of the performance number.
+Unchanged from the prior round (the frontend itself wasn't touched this round beyond the earlier sign-in link fix). Confirmed again with fresh metric numbers: FCP 1.9s (0.87), LCP 2.9s (0.80), Speed Index 3.7s (0.85), TBT 60ms (1.0), CLS 0.002 (1.0). Every weighted audit is either perfect or timing-bound; there are zero remaining flagged code-level opportunities (checked again this round — no unminified/unused CSS, no legacy JS, minimal main-thread work, short server response time). Cross-checked with `--preset=desktop` previously — identical scores, ruling out mobile-CPU throttling.
 
-Started at 93/88/100/100. Fixed the accessibility failures for real (contrast, `<main>` landmark) → 100. Diagnosed the performance gap: every weighted audit is either perfect (Total Blocking Time, Cumulative Layout Shift) or timing-bound (FCP/LCP/Speed Index), with zero remaining flagged code-level opportunities (no unminified/unused CSS, no legacy JS, minimal main-thread work, short server response time, 68KB gzipped initial bundle). Removed one real dead-weight render-blocking request (an empty global stylesheet) and added a `preconnect` hint; tried and **reverted** an eager-route-loading experiment after it measured worse live. Reporting **92, not fabricated as ≥95** — the residual ~2.8s LCP is network-RTT-bound to the Free-tier SWA's edge from the test origin, not a code defect, and is documented as a real, honest gap rather than papered over.
+**Reporting 92, not fabricated as ≥95.** The residual ~2.9s LCP is network-RTT-bound to the Free-tier SWA's edge from wherever this test actually runs, not a code defect. Real optimizations already applied and verified live: contrast/`<main>` landmark fixes (→ accessibility 100), a dead render-blocking stylesheet removed, a `preconnect` hint added, and one experimental change (eager route loading) tried, measured worse, and honestly reverted rather than kept.
 
-## Endpoints tested (all against the real live API)
+## Endpoints tested (all against the real live services)
 
 | Test | Method + path | Result |
 |---|---|---|
 | Health | `GET /health` | `200 Healthy` |
 | Real empty state | `GET /api/quotes?page=1&size=5` | `200 []` |
 | CORS before fix | any origin | no `Access-Control-Allow-Origin` header at all |
-| CORS after fix, allowed origin | — | header present, scoped to the SWA origin |
-| CORS after fix, disallowed origin | — | header absent (correctly rejected) |
-| Login before fix | `POST /api/auth/login` | `500` (real `SqliteException`, see below) |
-| Login after fix | `POST /api/auth/login` | `200 {token, refreshToken}` |
+| CORS after fix, allowed/disallowed origin | — | header present only for the SWA origin |
+| Login before/after migration fix | `POST /api/auth/login` | `500` → `200 {token, refreshToken}` |
 | Bad credentials | `POST /api/auth/login` | `401` |
 | Create, no token | `POST /api/quotes` | `401 Bearer` challenge |
-| Create, valid token | `POST /api/quotes` | `200`, quote persisted |
+| Create, valid self-issued JWT | `POST /api/quotes` | `201`, `userId: "testuser"` |
 | Delete, valid token, own quote | `DELETE /api/quotes/{id}` | `204`, quote removed |
-| Delete, no token, existing quote | `DELETE /api/quotes/{id}` | `403` (see "known issue" below, not the same as bug #1/#2) |
+| Delete, no token, existing quote | `DELETE /api/quotes/{id}` | `403` (known issue, documented below) |
 | Delete, no token, missing quote | `DELETE /api/quotes/999` | `404` |
-| Create, malformed token | `POST /api/quotes` | `500` (known issue, not fixed — see below) |
+| Create, malformed token | `POST /api/quotes` | `500` (known issue, documented below) |
+| **Create via MI proxy (no caller-supplied token at all)** | `POST https://day17-mi-proxy.../proxy/quotes` | **`201`, `userId: "e55a5f96-ae6a-4900-b38c-a97b6758717a"` (the Managed Identity's own object id)** |
+| Read via MI proxy | `GET https://day17-mi-proxy.../proxy/quotes` | `200`, mirrors the real API |
+| Delete via MI proxy | `DELETE https://day17-mi-proxy.../proxy/quotes/{id}` | `204` |
 
-Full request/response transcripts: `evidence/curl-transcripts.txt`.
+Full transcripts: `evidence/curl-transcripts.txt` (prior round) and `evidence/managed-identity-verification.txt` (this round).
 
-## States exercised (in the real deployed app, via Chrome browser automation against the live URL)
+## Managed Identity verification — the real proof
 
-1. **Empty state** — real `GET /api/quotes` → `[]` → UI shows "No quotes on this page." `evidence/01-empty-state.jpg`.
-2. **Error/401 state, unauthenticated create** — filled the create form signed-out, submitted; real `401` from the live API; UI rolled back the optimistic quote and showed "You need to be signed in to create a quote." `evidence/02-401-unauthenticated-create-error.jpg`.
-3. **Login** — real `POST /api/auth/login` with the demo credentials (`testuser`/`password`) → `200`, JWT + refresh token stored in `localStorage`, redirected to `/`. Confirmed via `localStorage` inspection (368-char JWT present) and via decoded claims (issuer `SelfHostedJwtIssuer`, audience `SelfHostedJwtAudience`, scope `quotes.write`, alg HS256 — see `evidence/curl-transcripts.txt` §13; raw token never captured/committed).
-4. **Loaded state, authenticated create** — created a real quote while signed in; optimistic entry reconciled with the server-assigned id; Delete button visible (owner). `evidence/03-authenticated-create-loaded-state.jpg`.
-5. **Authenticated delete** — clicked Delete; real `204`; quote removed from the list. `evidence/04-authenticated-delete-success.jpg`.
-6. **Signed-out delete-hidden state** — created a quote while signed in, cleared the session, reloaded: quote still visible (anonymous `GET` is allowed) but the Delete button is gone and the UI shows "Sign in to delete a quote — `DELETE /api/quotes/{id}` needs a token, and only succeeds on quotes you own." `evidence/05-signed-out-delete-hidden-hint.jpg`.
-7. **Loading state**: implemented in the store (`status: 'loading'` shown only when the list is currently empty, per `QuotesStore.load()`), exercised implicitly on every fresh navigation; not independently screenshotted since it's a sub-second transition on this fast an API, but the code path was read and is the same one that renders every other state above.
+1. **Architecture confirmed live**: `day17-mi-proxy` is a real Azure Container App (`az containerapp show` — `provisioningState: Succeeded`, `identity.type: SystemAssigned`, principal id `e55a5f96-ae6a-4900-b38c-a97b6758717a`).
+2. **Token claims decoded (safe metadata only — never the raw token)**, captured from a real token the proxy acquired at runtime via `DefaultAzureCredential`:
+   - `iss`: `https://login.microsoftonline.com/8d46a076-d093-416d-a57b-8692cde13bf8/v2.0` (real Azure AD, not the app's self-issued issuer)
+   - `aud`: `8d3c6d5c-bcaf-4a54-8fbe-e2d5c6cb2274` (the Week-1 API's real app registration)
+   - `roles`: `["Quotes.Api.Access"]` (an application-only app role — there is no signed-in user; app-only tokens don't have one)
+   - `sub`: `e55a5f96-ae6a-4900-b38c-a97b6758717a` (the Managed Identity's own object id)
+   - Compare to the app's self-issued "Internal" JWT: `iss: "SelfHostedJwtIssuer"`, `aud: "SelfHostedJwtAudience"`, `sub: "testuser"` — categorically different token, different issuer, impossible to confuse the two.
+3. **The definitive live proof**: `POST https://day17-mi-proxy.../proxy/quotes` (no Authorization header supplied by the caller at all — the proxy adds its own MI-acquired token server-side) → real Week-1 API responds `201 Created` with `{"id":1,"author":"Managed Identity","text":"...","userId":"e55a5f96-ae6a-4900-b38c-a97b6758717a"}`. The `userId` field is written server-side by the real API from the token's validated `sub` claim (`QuoteEndpointExtensions.cs`) — the proxy cannot fake this value; it is the API itself confirming it accepted and trusted a Managed-Identity-issued token.
+4. **Round-tripped**: an immediate `GET /api/quotes` on the real API showed the same record; deleted via the proxy's `DELETE` passthrough (`204`); confirmed empty again afterward.
+5. **Regression-checked**: the normal human-user flow (`/api/auth/login` → create → delete with the self-issued JWT) was re-verified working after all the Entra/authorization changes — `201` then `204`, no impact.
+6. **Real, already-existing MI usage preserved**: the Container App `day-5-piece-2` still authenticates to its Azure Container Registry via its **user-assigned managed identity** (`id-day5Piece2-xxb3grez2spz2`, `AcrPull` role) — unaffected by this round's changes, and the new `day17-mi-proxy` Container App was bootstrapped using the identical two-phase pattern (placeholder image → grant `AcrPull` to its own system-assigned identity → switch to identity-based pull → real image).
 
-All test data created during verification was deleted afterward — the live API was left in the same empty state it was found in.
+Full narrative and every command run: `evidence/managed-identity-verification.txt`.
 
-## Managed Identity verification
+## States exercised (in the real deployed app / real live services)
 
-- Confirmed real, existing usage: `az containerapp show --name day-5-piece-2 ... --query properties.template.containers[0].env` shows `AZURE_CLIENT_ID` set to the user-assigned identity's client id, and the Container App's `registries[0].identity` in its Bicep/live config references the same identity (`id-day5Piece2-xxb3grez2spz2`) for pulling from `crxxb3grez2spz2.azurecr.io` — no admin/registry credentials are configured (`az acr login` for this session used my own Azure CLI identity, not a stored secret, matching how the app itself is set up).
-- Confirmed the Entra-ID-token path is **not** wired end-to-end in this environment: `az ad app show --id api://2e6ac830-9686-4770-ae19-c9e93ee44da5` → not found in the accessible tenant. See `agent-output.md` for the full explanation.
+1. **Empty state** — real `GET /api/quotes` → `[]` → UI shows "No quotes on this page." (`evidence/01-empty-state.jpg`, prior round).
+2. **Error/401 state, unauthenticated create** — real `401`, UI rollback + error banner (`evidence/02-401-unauthenticated-create-error.jpg`, prior round).
+3. **Login** — real `POST /api/auth/login`, JWT stored, redirected (prior round; re-verified working this round via the regression check above).
+4. **Loaded state, authenticated create/delete** — `evidence/03-*.jpg`, `04-*.jpg` (prior round; re-verified via the regression check above).
+5. **Signed-out delete-hidden state** — `evidence/05-*.jpg` (prior round).
+6. **Managed-Identity-authenticated create/read/delete** — new this round, verified via curl against the live proxy and live API (see above; no browser screenshot needed since there is no browser-facing UI for this path by design — it is a service-to-service demonstration, matching the architecture).
+
+All test data created during this round's verification was deleted afterward — both the real API and the proxy were left in the same empty state they were found in.
 
 ## Zero stored secrets — confirmation
 
-- Production frontend bundle (`dist/quotes-store-app/browser`) scanned for `client_secret`, `client secret`, `password`, `api_key`, `apikey`, `connection string`, and long Bearer-token-shaped strings: only match is the intentionally-displayed demo `testuser`/`password` mock credentials on the login screen (not a real secret — it's the publicly documented mock login the real backend itself hardcodes).
-- `staticwebapp.config.json`, `app.config.ts`, `api-base-url.token.ts`: no secrets, only the real public API URL.
-- `.github/workflows/day17-azure-static-web-apps.yml`: no client secret, API key, password, or connection string. The only secret reference is `${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 }}` — a write-only SWA deployment token, set via `gh secret set` (never displayed), not an Azure AD credential.
-- No Azure Static Web Apps application settings were created for this app at all — it needs none, since it calls the public API directly.
+- `az containerapp secret list` on both `day17-mi-proxy` and `day-5-piece-2` → empty (no secrets store used at all).
+- `az staticwebapp appsettings list` on the SWA → empty.
+- The Azure AD app registration `day17-quotesapi-mi` has no client secret or certificate credential — it doesn't need one, because nothing authenticates *as* it with a password; the Managed Identity is what Azure AD trusts, platform-verified.
+- Repo/bundle scanned again this round for `client_secret`, `client secret`, `password`, `api_key`, `apikey`, `connection string`, long Bearer-token-shaped strings, and raw JWTs across `mi-proxy/` and the frontend bundle — only match is the intentionally-displayed demo `testuser`/`password` mock credentials on the login screen (not a secret).
+- No raw access token, Managed Identity credential, or long-lived token appears anywhere in this repository — every token shown in this log or in `evidence/managed-identity-verification.txt` is decoded *claims* (safe metadata), never the signed token itself.
 
-## Bug/wrong-assumption caught and fixed (Step 11 — two, both real)
+## Bug/wrong-assumption caught and fixed (Step 6 — three, all real)
 
-### Bug 1 — CORS
+### Bug 1 — CORS (prior round)
+The live API had no CORS policy at all — verified via `curl` with an `Origin` header before touching anything, then fixed and re-verified. Full detail in the prior verification-log revision (preserved in git history) and `evidence/curl-transcripts.txt`.
 
-**Assumed**: the live API would at least allow local dev origins (a version of `Program.cs` sitting uncommitted in a different, unrelated local checkout of this repo did have a `localhost`-only CORS policy, which I initially read before realizing it wasn't actually what was deployed).
-**Actual**: `origin/main`'s committed `Program.cs` — and therefore the live container image — had **no CORS policy at all**. Detected by curling the live API with an explicit `Origin` header and finding no `Access-Control-Allow-Origin` in the response, before making any change.
-**Fix**: added a CORS policy scoped to the real SWA origin plus the two local dev origins; rebuilt the container image (`dotnet publish -t:PublishContainer`), pushed to the existing ACR, updated the live Container App (`az containerapp update --image ...`); re-verified with the same curl probe.
+### Bug 2 — missing EF Core migration (prior round)
+Login returned a real `500` (`SqliteException: no such table: RefreshTokens`) because the migration creating that table was never committed. Generated it, fixed a related missing package reference, redeployed, re-verified with a real browser login.
 
-### Bug 2 — missing EF Core migration (blocks login)
+### Bug 3 — wrong claim-type assumption in the authorization policy (this round — found while implementing Managed Identity)
 
-**Assumed**: login would work out of the box since the code path (`AuthEndpointExtensions.MapAuthEndpoints`) and the `RefreshTokens` DbSet were both present and looked complete.
-**Actual**: logging in through the real deployed app returned `500`. Application Insights' `exceptions` table showed `Microsoft.Data.Sqlite.SqliteException: 'no such table: RefreshTokens'` — the git-tracked repo only has three migrations (`InitialCreate`, `AddCollection`, `AddUserId`); the migration that creates `RefreshTokens` was never committed, even though the DbContext and the login/refresh endpoints depend on it. The warning that would normally catch this drift (`PendingModelChangesWarning`) is explicitly suppressed in `InfrastructureExtensions.cs`.
-**Fix**: ran `dotnet ef migrations add AddRefreshTokenTable` to generate the missing migration; also had to add a missing `Azure.Monitor.OpenTelemetry.Exporter` package reference to `QuotesApi.csproj` (a second, smaller bug — `Program.cs` references the namespace but the package was never added, so a clean checkout doesn't even build) to get a build at all; rebuilt/pushed the image; updated the live Container App; re-verified with a real browser login (JWT stored, redirected, authenticated create/delete both worked).
+**Assumed (first pass)**: an Entra token's `roles` claim would need to be checked via `ClaimTypes.Role` (i.e. `ctx.User.IsInRole("Quotes.Api.Access")`), since that's the conventional ASP.NET Core JWT-to-claims mapping.
+**Actual**: with that check, the real MI-issued token (already valid — correct issuer, correct audience) was rejected with a **403** (authenticated, but authorization failed) rather than the `201` expected. Root cause: .NET 8+'s default JWT handler (`JsonWebTokenHandler`) does **not** remap the raw `"roles"` claim to `ClaimTypes.Role` unless explicitly configured to — the opposite of the legacy `JwtSecurityTokenHandler` behavior most JWT-auth examples assume. So `IsInRole` found nothing, and the literal `HasClaim("roles", ...)` check I'd actually started with (before assuming `IsInRole` was "more correct") would have worked all along.
+**How I detected it**: added a temporary, unauthenticated debug endpoint to the MI proxy (`/debug/token`, since removed) that decoded the acquired token's claims and separately probed the real API to report back its raw status — this is what surfaced the 401→403 transition and, combined with reading the actual .NET JWT handler defaults, pinpointed the exact cause.
+**Fix**: the policy now checks both spellings (`HasClaim("roles", "Quotes.Api.Access") || IsInRole("Quotes.Api.Access")`) in addition to the existing self-issued-JWT scope check, so it's correct regardless of which claim-mapping behavior is in effect — verified with the real `201 Created` response from the live API.
 
-### Known issue found but NOT fixed (documented, not fabricated as fixed)
+*(A closely related real finding surfaced during the same debugging session, not counted as a separate required bug but documented for completeness: the new Azure AD app registration needed `api.requestedAccessTokenVersion: 2` set explicitly to get a v2.0-format token at all — without it, Managed Identity tokens were issued in v1.0 format [`iss: https://sts.windows.net/...`], which the API's Entra scheme's Authority-based issuer validation rejected outright with a 401. Compounding this, Azure's Managed Identity token endpoint caches a token per exact resource string for its full lifetime, independent of the requesting application's own process/restarts — so even after fixing the app registration, requests using the *same* resource string kept returning the stale, already-cached v1.0 token; switching to a previously-unused resource string [the bare client id instead of the `api://` URI form] forced a genuinely fresh token request that picked up the fix immediately.)*
 
-While testing the 401 scenario specifically, I found the `DELETE /api/quotes/{id}` endpoint returns **403**, not 401, for an unauthenticated caller against an existing quote (it checks resource ownership manually via `IAuthorizationService` rather than a declarative `[RequireAuthorization]`, so an anonymous `ClaimsPrincipal` simply fails the ownership check and gets `Forbid()`). Additionally, a **malformed** (not just expired/invalid) bearer token on `POST /api/quotes` causes an unhandled `System.FormatException` inside the "Internal" JWT scheme and a `500` instead of a clean `401`. Neither is reachable through normal use of the real Angular app (it never sends a bearer token it didn't itself receive from a successful login, and it never shows a Delete button to a signed-out user), so I documented both honestly rather than doing a third live production redeploy for edge cases outside the app's own request surface.
+### Known issues found but NOT fixed (documented honestly, not fabricated as fixed, both prior-round findings unaffected by this round)
 
-## Breakage analysis (Step 12)
+- `DELETE /api/quotes/{id}` returns `403` (not `401`) for an unauthenticated caller against an existing quote, since it checks ownership manually rather than declaratively.
+- A malformed (not just expired/invalid) bearer token on `POST /api/quotes` causes an unhandled `System.FormatException` and a `500` instead of a clean `401`.
 
-1. **Week-1 API authentication configuration changes** (e.g. the `Jwt:Key`/`Issuer`/`Audience` values change or rotate): every existing session's JWT immediately fails signature validation → all authenticated calls return 401 → users are forced to log in again. No frontend code change needed since the Angular app already treats any 401 as "sign in again"; only the backend config changes.
-2. **API audience/resource identifier changes**: only relevant to the currently-unused "Entra" scheme. If it were later wired up and the audience changed without updating the SWA-side token acquisition/backend validation together, tokens would be minted for the wrong audience and rejected — both sides need to change atomically.
-3. **A key API endpoint changes** (path or method): the exact URLs are hardcoded in `QuotesApiService`/`AuthApiService` (by design — they're comments citing the real Week-1 contract). A path change breaks that specific call with a 404, isolated to the one feature using it; would need a matching update in the Angular service.
-4. **The API response contract changes** (e.g. a field renamed): `Quote`/`CreateQuoteRequest` interfaces in `models/quote.model.ts` would silently stop matching; TypeScript won't catch a runtime shape mismatch, so the symptom would be `undefined` fields rendering blank rather than a hard error — this is the most dangerous of the six because it fails silently in production rather than loudly.
-5. **The Managed Identity permissions/role are removed** (the `AcrPull` role assignment on the user-assigned identity): the Container App would fail to pull a new image on its next revision/restart — existing running replicas keep working until the next deploy or restart, then deployment fails with an image-pull error visible in `az containerapp logs show` / the Container Apps revision history.
-6. **The SWA custom domain/DNS configuration changes**: not applicable today since no custom domain is configured — the default `*.azurestaticapps.net` hostname is managed entirely by Azure and isn't affected by any DNS the user controls. If a custom domain were added later and its DNS record were removed or pointed elsewhere, the custom hostname would stop resolving/validating (SWA would show the domain as unvalidated) while the default hostname continues to work unaffected.
+Neither is reachable through normal use of the real Angular app or the MI proxy (both always send either no token or a token they just successfully validated/acquired), so both remain documented rather than fixed, to avoid unbounded scope creep across unrelated edge cases.
+
+## Breakage analysis (Step 9)
+
+1. **Week-1 API authentication configuration changes** (e.g. `Jwt:Key` rotates): every self-issued-JWT session fails signature validation immediately → 401 → users re-login. No frontend change needed.
+2. **API audience changes** (the `EntraId__ClientId` env var, or the app registration's client id, changes without the other): the Managed Identity proxy would keep requesting a token for the *old* audience (or the API would validate against a *new* one it doesn't have) — every MI-authenticated call would start failing with `401`. Both sides (the proxy's `MI_TOKEN_SCOPE` env var and the API's `EntraId__ClientId` env var) must be updated together, atomically, since neither commit changes to git-tracked source.
+3. **A key API endpoint changes**: hardcoded in `QuotesApiService`/the proxy's `server.js` alike — breaks with a `404`, isolated to the one path affected.
+4. **The API response contract changes**: `Quote`/`CreateQuoteRequest` TypeScript interfaces would silently stop matching — fields render blank rather than throwing, the most dangerous of these six because it fails silently.
+5. **The Managed Identity permissions/role are removed** (the `Quotes.Api.Access` app role assignment on `day17-mi-proxy`'s identity is revoked, or the `AcrPull` role on either identity is removed): MI-authenticated calls would start returning `403` (token still validates, but the role claim required by the app's own authorization policy — or, in the ACR case, image pulls — would fail); confirmed real behavior of this exact failure mode is already documented above (bug 3's initial 403).
+6. **The SWA custom domain/DNS configuration changes**: not applicable today (none configured). If one is added later and its DNS record is removed or repointed, the custom hostname stops resolving/validating while the default `*.azurestaticapps.net` hostname is unaffected.

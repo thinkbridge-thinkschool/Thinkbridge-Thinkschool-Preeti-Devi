@@ -2,55 +2,82 @@
 
 ## Summary
 
-Deployed the real Angular frontend (sourced from `day-16/piece-2/quotes-store-app`) to a real Azure Static Web App, wired to call the real, live Week-1 QuotesApi (`day-5/Day-5-Piece-2`, already running on Azure Container Apps). Along the way, found and fixed two real, pre-existing bugs in the backend that blocked the deployment from actually working, and made the frontend Lighthouse-ready. No client secret is stored anywhere in the pipeline.
+Deployed the real Angular frontend (sourced from `day-16/piece-2/quotes-store-app`) to a real Azure Static Web App, wired to call the real, live Week-1 QuotesApi (`day-5/Day-5-Piece-2`, already running on Azure Container Apps). Built and verified a real Managed-Identity architecture end-to-end (a dedicated proxy Container App with a system-assigned identity, a new Azure AD app registration, and API-side validation), found and fixed three real bugs along the way, and confirmed zero secrets anywhere in the pipeline.
 
 Live site: **https://delightful-smoke-0b2c56200.7.azurestaticapps.net**
 Real API: **https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io**
+Managed Identity proxy: **https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io**
 
 ## What I implemented
 
 ### Frontend (`day-17/deploy-to-azure-static-web-apps/frontend`)
 
 - Copied from `day-16/piece-2/quotes-store-app` (Angular `^22.1.0`, zoneless, standalone, signals-based state via `QuotesStore`).
-- `core/tokens/api-base-url.token.ts` and `app.config.ts`: replaced `http://localhost:5000/api` with the real HTTPS API URL. No `localhost` reference remains in this copy.
-- `staticwebapp.config.json` (new): SPA navigation fallback to `index.html` for client-side routes (`/login`), plus a `Content-Security-Policy` scoped to `'self'` + the real API origin, and standard security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`).
-- Accessibility fixes (all verified via a real Lighthouse run against the live URL, not assumed): added `<label>`s (visually-hidden) for the create-quote `author`/`text` inputs, darkened two low-contrast text colors (`#94a3b8`/`#64748b` → `#475569`) to clear WCAG AA 4.5:1, added a `<main>` landmark.
-- SEO/best-practices: added a `<meta name="description">` and `theme-color`.
-- Performance: added `<link rel="preconnect">` to the real API origin; removed a dead render-blocking `<link rel="stylesheet">` pointing at a permanently-empty compiled `styles.css` (the source file only ever contained the default Angular CLI placeholder comment — this app has no real global CSS, everything is component-scoped). Tried eagerly loading the default route instead of lazy `loadComponent` to save a round trip; measured it live and it made LCP/FCP worse (bigger initial bundle), so reverted rather than keep a change that didn't actually help.
-- Production build output: `dist/quotes-store-app/browser` (confirmed by an actual `ng build --configuration production` run, not assumed from convention).
-- All 12 existing unit tests still pass unmodified.
-- Production bundle scanned for secret-shaped strings (`client_secret`, `password`, `api_key`, `connection string`, etc.) — the only match is the intentionally-displayed demo `testuser`/`password` mock credentials shown on the login screen, not a real secret.
+- `core/tokens/api-base-url.token.ts` / `app.config.ts`: real HTTPS API URL, no `localhost`.
+- `staticwebapp.config.json`: SPA fallback, CSP scoped to `'self'` + the real API origin, standard security headers.
+- Accessibility (verified via a real Lighthouse run against the live URL): labels on the create-quote inputs, contrast fixes, `<main>` landmark → accessibility 100.
+- SEO/best-practices: meta description, theme-color → both 100.
+- Performance: preconnect hint, removed a dead render-blocking empty stylesheet; tried and reverted an eager-route-loading experiment after it measured worse live. Final: 92 (see verification-log.md for why this specific number is honest, not fabricated).
+- Header now shows a "Sign in"/"Sign out" control (a real bug found in an earlier round of this same deployment — the login page existed but nothing linked to it).
+- All 12 unit tests pass; production bundle scanned clean of secret-shaped strings.
 
 ### Backend reference copy (`day-17/deploy-to-azure-static-web-apps/backend`)
 
-A synced copy of the real, already-deployed `day-5/Day-5-Piece-2` source, kept in sync with the two live fixes below, for documentation/traceability. **The actual running service is the existing `day-5-piece-2` Container App** — this copy does not deploy a second instance.
+Kept in sync with the real, already-deployed `day-5/Day-5-Piece-2` source, including all fixes below. The actual running service is the existing `day-5-piece-2` Container App — this is a traceability copy, not a second deployment.
 
-### SWA configuration and CI/CD
+### Managed Identity proxy (`day-17/deploy-to-azure-static-web-apps/mi-proxy`) — new this round
 
-- Created the real Azure Static Web App via `az staticwebapp create` (Free tier, East Asia — had to register the `Microsoft.Web` resource provider on the subscription first).
-- `.github/workflows/day17-azure-static-web-apps.yml` (new, repo root — GitHub Actions only triggers on workflows at the repo root): on push to `main` touching `day-17/deploy-to-azure-static-web-apps/frontend/**`, installs deps, runs unit tests, builds production, scans the build output for secret-shaped strings (fails the build if any are found), then deploys via `Azure/static-web-apps-deploy@v1` using the deployment token secret. Also handles PR preview environments and their cleanup on close.
-- The only secret involved is the SWA deployment token (`AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17`), set via `gh secret set` (value never displayed/logged/committed). It is a write-only static-file deployment credential, not an Azure AD client secret or an API key for the Week-1 API.
-- Deployed and verified for real via the Azure Static Web Apps CLI (`swa deploy`) in addition to the workflow being in place for future pushes.
+A small Node.js HTTP service (`server.js`, no framework dependency beyond `@azure/identity`), deployed as its own Azure Container App with a **system-assigned Managed Identity**:
 
-## Managed Identity — what I found, and the honest architecture
+- `GET/POST /proxy/quotes`, `DELETE /proxy/quotes/{id}` — mirrors the real API's shape, forwards method/query/body verbatim.
+- Acquires a token via `DefaultAzureCredential().getToken(scope)` on every request (the Azure SDK handles in-process caching); attaches it as `Authorization: Bearer <token>`; forwards to the real Week-1 API; returns the API's response as-is.
+- **The token is never returned to the caller** — only the API's JSON response crosses back out.
+- CORS scoped to the real SWA origin via an `ALLOWED_ORIGIN` env var (non-secret).
 
-The task (and the linked reference example) call for a browser → SWA-Managed-Identity-token → Azure-AD-protected-API pattern. I checked whether this is genuinely achievable here before claiming it:
+**Why a Container App and not an Azure Function**: I first built this as an Azure Function (Consumption plan) per the originally-sketched architecture. Both a first attempt (East Asia) and a retry (Central India, after a region-policy rejection in East US) resulted in the Function App's own platform host returning `503` persistently — even the Kudu/SCM management site was down, which is a platform-level symptom, not a code issue (confirmed no useful diagnostic logs were even obtainable because Kudu itself was unreachable). Rather than keep fighting an unreliable host, I switched to a Container App — the exact same hosting technology already proven reliable in this subscription for the real Week-1 API — which worked on the first real attempt. The abandoned Function App and its storage account were deleted (`az functionapp delete`, `az storage account delete`) rather than left as dead resources.
 
-- `appsettings.json` on the real API has an `EntraId` section (`TenantId: 6e138bc2-...`, `ClientId: api://2e6ac830-...`) that the code's "Entra" JWT scheme validates against.
-- I ran `az ad app show --id api://2e6ac830-9686-4770-ae19-c9e93ee44da5` against the actual Azure CLI session for this deployment (tenant `8d46a076-...`, "Azure for Students") — **the application does not exist in this tenant.** It's either from a different tenant this deployment has no access to, or stale example configuration.
-- Building the reference repo's exact pattern (SWA Standard-plan Managed Identity → a managed Function proxy → an Entra app-role-protected downstream API) would require either access to that other tenant, or registering a brand-new Azure AD app in this tenant and then **reconfiguring and redeploying the live, shared `day-5-piece-2` Container App's Entra settings** — a change to Day 5's own graded artifact, beyond what a frontend deployment task should silently do, and not something I did without it being asked for.
+**Deployment**: `Dockerfile` (`node:22-alpine`, `npm install --omit=dev`, `CMD node server.js`), built and pushed to the existing ACR (`crxxb3grez2spz2.azurecr.io/day17/quotesapi-mi-proxy`), deployed via `az containerapp create` using the same two-phase bootstrap pattern the existing infra already uses for `day-5-piece-2` (create with a placeholder public image first, since a brand-new identity can't pull from ACR before it has the `AcrPull` role; grant the role; switch to `--registry-identity system`; then update to the real image).
 
-**What I did instead, honestly:** documented the Managed Identity usage that is real and already live in this exact system — the Container App's **user-assigned managed identity** (`id-day5Piece2-xxb3grez2spz2`) is what it uses to pull its own image from Azure Container Registry (`AcrPull` role), with zero registry credentials stored anywhere. Separately, and independent of Managed Identity: the browser-to-API path in this app was *already* secretless before I touched it — it uses a username/password login that returns a short-lived bearer token, never an OAuth client secret. A browser SPA cannot hold Managed Identity credentials at all (MI is only usable by Azure-hosted compute), so the "no client secret in the browser" requirement is satisfied by this system's existing design, not by inventing an MI flow that isn't actually wired up end-to-end.
+### Azure AD / Entra configuration — new this round
 
-## Two real bugs found and fixed (see verification-log.md for full detail)
+- **New app registration** `day17-quotesapi-mi` (`az ad app create`, tenant `8d46a076-d093-416d-a57b-8692cde13bf8` — the tenant this session's Azure CLI actually has access to; the tenant/app referenced in the original `appsettings.json` doesn't exist here, confirmed via `az ad app show` returning not-found).
+- Application ID URI `api://8d3c6d5c-bcaf-4a54-8fbe-e2d5c6cb2274`, one application-only app role `Quotes.Api.Access`, and `api.requestedAccessTokenVersion: 2` (see the bug writeup — this was missing initially and caused a real failure).
+- Service principal created (`az ad sp create`), then the Container App's system-assigned identity was granted the `Quotes.Api.Access` role directly via a Microsoft Graph `POST /servicePrincipals/{id}/appRoleAssignments` call (`az rest`) — no interactive admin-consent flow needed, since this is a direct application-permission grant on an app we own.
+- The real Week-1 API's `EntraId__TenantId`/`EntraId__ClientId` were repointed to this new tenant/app via **Container App environment variables only** (`az containerapp update --set-env-vars`) — no source file changed, no secret involved (a tenant id and a client id are public identifiers, not credentials).
 
-1. **CORS**: the live API had no CORS policy at all (verified via `curl` with an `Origin` header before touching anything). Added a policy scoped to the real SWA origin + local dev origins, rebuilt/pushed the container image, updated the live Container App, re-verified.
-2. **Missing EF Core migration**: login returned a real `500` because `RefreshTokens` (used by the login/refresh endpoints) had no migration ever creating it in the git-tracked repo. Generated the missing migration, fixed a second smaller issue (a missing `Azure.Monitor.OpenTelemetry.Exporter` package reference that also broke the build from a clean checkout), rebuilt/pushed, updated the live Container App, re-verified end-to-end including a real browser login.
+### SWA configuration and CI/CD (unchanged from the prior round)
+
+- `az staticwebapp create` (Free tier, East Asia).
+- `.github/workflows/day17-azure-static-web-apps.yml`: install, test, build, secret-scan, deploy via `Azure/static-web-apps-deploy@v1` using the deployment token secret (the only secret in the whole pipeline — a write-only static-file deployment credential, not an Azure AD client secret or API key).
+
+## Managed Identity — the real, verified architecture
+
+```
+Angular (browser)  →  day17-mi-proxy (Container App, system-assigned MI)
+                          │ DefaultAzureCredential.getToken(...) — server-side only
+                          ▼
+                       day-5-piece-2 (real Week-1 API)
+                          │ validates: issuer = Azure AD v2.0, audience = app's
+                          │ client id, requires "Quotes.Api.Access" app role
+                          ▼
+                       real response (quote created/read/deleted)
+```
+
+Verified with a real HTTP request/response, not simulated — see `verification-log.md` and `evidence/managed-identity-verification.txt` for the full transcript. The definitive proof: a quote created through the proxy has `userId` equal to the Managed Identity's own Azure AD object id (`e55a5f96-ae6a-4900-b38c-a97b6758717a`) — the real API wrote that value from the token's validated `sub` claim, which the proxy has no way to fake.
+
+## Three real bugs found and fixed (see verification-log.md for full detail)
+
+1. **CORS** (prior round): the live API had no CORS policy at all.
+2. **Missing EF Core migration** (prior round): login returned a real `500` because `RefreshTokens` had no migration.
+3. **Wrong claim-type assumption in the authorization policy** (this round, found while implementing Managed Identity): assumed the JWT's `roles` claim would need `ClaimTypes.Role`/`IsInRole()` to be checked (a common ASP.NET Core JWT convention), then had to correct that assumption a second time when it still failed — see verification-log.md for the full sequence (also documents a related real finding: an app registration's `api.requestedAccessTokenVersion` must be explicitly set to `2`, and Azure's Managed Identity token endpoint caches a token per exact resource-string for its full lifetime independent of application restarts, which delayed observing the fix).
+
+## Custom domain — blocked, not fabricated
+
+No domain is available (checked the repo, the SWA resource, and the subscription's DNS zones — none exist). Documented in `deployment-brief.md` exactly what's needed from you and the exact Azure command to run once you have one. Everything else in this deliverable is complete independent of this.
 
 ## Files changed
 
-- `day-17/deploy-to-azure-static-web-apps/` — new folder: `deployment-brief.md`, `agent-output.md`, `verification-log.md`, `frontend/` (full Angular app), `backend/` (reference copy), `evidence/` (screenshots, Lighthouse reports, curl transcripts).
-- `.github/workflows/day17-azure-static-web-apps.yml` — new.
-- `day-5/Day-5-Piece-2/Program.cs` — added the CORS policy (bug #1 fix).
-- `day-5/Day-5-Piece-2/QuotesApi.csproj` — added the missing `Azure.Monitor.OpenTelemetry.Exporter` package reference.
-- `day-5/Day-5-Piece-2/Migrations/20260829074302_AddRefreshTokenTable.*` — new migration (bug #2 fix).
+- `day-17/deploy-to-azure-static-web-apps/` — `deployment-brief.md`, `agent-output.md`, `verification-log.md` (updated), `frontend/` (sign-in/out control), `backend/` (synced), `mi-proxy/` (new), `evidence/` (new MI verification transcript + final Lighthouse run).
+- `day-5/Day-5-Piece-2/Extensions/InfrastructureExtensions.cs` — authorization policy now accepts the Managed Identity's app role claim as well as the existing user-JWT scope claim (both claim-type spellings checked, per the bug writeup).
+- Live Azure configuration only (no source/git changes): `day-5-piece-2` Container App's `EntraId__TenantId`/`EntraId__ClientId` env vars repointed to the new app registration.
+- New live Azure resources: Azure AD app registration `day17-quotesapi-mi` + its service principal + app role assignment; Container App `day17-mi-proxy` (resource group `rg-day17-swa`) with system-assigned Managed Identity.

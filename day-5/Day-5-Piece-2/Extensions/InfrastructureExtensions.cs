@@ -91,9 +91,25 @@ public static class InfrastructureExtensions
             };
         });
 
-        services.AddAuthorization(options => 
+        services.AddAuthorization(options =>
         {
-            options.AddPolicy("can-edit-quotes", p => p.RequireClaim("scope", "quotes.write"));
+            // Day 17: two callers can legitimately reach this policy now —
+            // a signed-in user's self-issued "Internal" JWT (scope=quotes.write),
+            // or a Managed-Identity-issued "Entra" token presented by a trusted
+            // server-side proxy, which carries an app role instead of a scope
+            // claim (app-only tokens have no user to have "signed in", so there
+            // is no "scope" claim at all — only "roles").
+            // Whether the JWT's "roles" claim shows up as literal claim type
+            // "roles" or gets renamed to ClaimTypes.Role depends on which
+            // token handler is active (JsonWebTokenHandler, the .NET 8+
+            // default, does NOT remap by default; the legacy
+            // JwtSecurityTokenHandler does) — checked both ways instead of
+            // assuming one, since guessing wrong here silently 403s every
+            // Managed Identity caller.
+            options.AddPolicy("can-edit-quotes", p => p.RequireAssertion(ctx =>
+                ctx.User.HasClaim("scope", "quotes.write") ||
+                ctx.User.HasClaim("roles", "Quotes.Api.Access") ||
+                ctx.User.IsInRole("Quotes.Api.Access")));
             options.AddPolicy("OwnerOnly", p => p.Requirements.Add(new QuoteOwnerRequirement()));
         });
 
