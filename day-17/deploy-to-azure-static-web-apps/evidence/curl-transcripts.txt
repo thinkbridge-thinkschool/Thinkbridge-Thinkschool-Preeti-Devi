@@ -1,0 +1,93 @@
+Day 17 — Live API/CORS/Auth verification transcripts
+Real Week-1 API: https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io
+Real SWA: https://delightful-smoke-0b2c56200.7.azurestaticapps.net
+
+=== 1. Health check ===
+$ curl -i https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/health
+HTTP/1.1 200 OK
+content-type: text/plain
+Body: Healthy
+
+=== 2. Real empty state (GET /api/quotes) ===
+$ curl https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes?page=1&size=5
+HTTP/1.1 200 OK
+Body: []
+
+=== 3. CORS — BEFORE fix (bug #1, verified before the fix was deployed) ===
+$ curl -i https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes \
+    -H "Origin: https://delightful-smoke-0b2c56200.7.azurestaticapps.net"
+HTTP/1.1 200 OK
+(no Access-Control-Allow-Origin header present at all — origin/main's Program.cs had zero CORS policy)
+
+=== 4. CORS — AFTER fix, allowed origin ===
+$ curl -i https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes \
+    -H "Origin: https://delightful-smoke-0b2c56200.7.azurestaticapps.net"
+HTTP/1.1 200 OK
+access-control-allow-origin: https://delightful-smoke-0b2c56200.7.azurestaticapps.net
+vary: Origin
+
+=== 5. CORS — AFTER fix, disallowed origin (correctly rejected) ===
+$ curl -i https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes \
+    -H "Origin: https://evil.example.com"
+HTTP/1.1 200 OK
+(no Access-Control-Allow-Origin header — origin not in the allow-list)
+
+=== 6. Login — BEFORE migration fix (bug #2) ===
+$ curl -i -X POST https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/auth/login \
+    -H "Content-Type: application/json" -d '{"username":"testuser","password":"password"}'
+HTTP/1.1 500 Internal Server Error
+Body: {"title":"An unexpected error occurred.","status":500,"detail":"The server encountered an unexpected error."}
+
+Root cause (from Application Insights `exceptions` table):
+  type: Microsoft.Data.Sqlite.SqliteException
+  message: "SQLite Error 1: 'no such table: RefreshTokens'."
+  method: QuotesApi.Extensions.AuthEndpointExtensions+<>c+<<MapAuthEndpoints>b__0_0>d.MoveNext
+
+=== 7. Login — AFTER migration fix ===
+$ curl -i -X POST https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/auth/login \
+    -H "Content-Type: application/json" -d '{"username":"testuser","password":"password"}'
+HTTP/1.1 200 OK
+Body: {"token":"<redacted>","refreshToken":"<redacted>"}   (368-char JWT, HS256, redacted below)
+
+=== 8. Bad credentials -> 401 ===
+$ curl -i -X POST https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/auth/login \
+    -H "Content-Type: application/json" -d '{"username":"testuser","password":"wrong"}'
+HTTP/1.1 401 Unauthorized
+
+=== 9. Create quote, no token -> 401 (write endpoint uses [RequireAuthorization]) ===
+$ curl -i -X POST https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes \
+    -H "Content-Type: application/json" -d '{"author":"x","text":"y"}'
+HTTP/1.1 401 Unauthorized
+www-authenticate: Bearer
+
+=== 10. Delete an EXISTING quote, no token -> 403 (not 401 — see verification-log.md "known issue") ===
+$ curl -i -X DELETE https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes/3
+HTTP/1.1 403 Forbidden
+(the delete endpoint checks resource ownership manually via IAuthorizationService rather than
+ [RequireAuthorization], so an anonymous caller fails the OwnerOnly check and gets Forbid(),
+ not a 401 challenge — confirmed against a real, existing quote id)
+
+=== 11. Delete a NON-existent quote, no token -> 404 (ownership check never runs; existence checked first) ===
+$ curl -i -X DELETE https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes/999
+HTTP/1.1 404 Not Found
+
+=== 12. Create quote with a malformed bearer token -> 500 (known issue, NOT fixed — see verification-log.md) ===
+$ curl -i -X POST https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io/api/quotes \
+    -H "Authorization: Bearer garbage.invalid.token" -H "Content-Type: application/json" -d '{"author":"x","text":"y"}'
+HTTP/1.1 500 Internal Server Error
+
+Root cause (from Application Insights `exceptions` table):
+  type: System.FormatException
+  message: "IDX12729: Unable to decode the header ... as Base64Url encoded string."
+  (an unhandled exception inside the "Internal" JwtBearer scheme's token parsing — a well-formed
+   but invalid/expired token is handled correctly as 401; only a token whose header segment isn't
+   valid Base64Url triggers this. The real Angular app never sends a token it didn't itself
+   receive from a successful login, so this path isn't reachable through normal UI use.)
+
+=== 13. Decoded JWT claims (safe metadata only — no signature, no raw token) ===
+  alg: HS256, typ: JWT
+  iss: SelfHostedJwtIssuer
+  aud: SelfHostedJwtAudience
+  sub: testuser
+  scope: quotes.write
+  (5-minute access token lifetime per JwtOptions.AccessTokenLifetime default)

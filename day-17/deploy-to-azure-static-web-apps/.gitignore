@@ -1,0 +1,19 @@
+# Build output
+node_modules/
+dist/
+.angular/
+bin/
+obj/
+
+# Never commit these. The whole point of Day 17 is that no credential is stored
+# anywhere — not in a file, not in an app setting, not in a container secret.
+.env
+.env.*
+.azure/
+*.pfx
+*.pem
+
+# Local SQLite databases, including the throwaway ones scripts/smoke-local.sh makes.
+*.db
+*.db-*
+smoke-test-*.db*

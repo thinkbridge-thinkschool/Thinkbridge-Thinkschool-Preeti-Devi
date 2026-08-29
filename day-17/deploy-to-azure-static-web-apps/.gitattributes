@@ -1,0 +1,16 @@
+# These files are executed by a Linux shell — the GitHub Actions runner, a Container App,
+# and the Docker build. A CRLF line ending in any of them fails at the shebang with
+# `bad interpreter: /bin/bash^M`, which is a confusing way to learn that a Windows
+# checkout wrote them back with CRLF. Pin them to LF regardless of anyone's core.autocrlf.
+*.sh text eol=lf
+*.mjs text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# Lighthouse reports are generated artifacts. Diffing them is noise, and the HTML ones
+# are a single enormous line that git would otherwise try to merge.
+evidence/*.report.html linguist-generated=true -diff
+evidence/*.report.json linguist-generated=true -diff
+
+# So GitHub's language stats describe the day's own work rather than a vendored lockfile.
+frontend/package-lock.json linguist-generated=true

@@ -1,0 +1,12 @@
+bin/
+obj/
+.env
+.env.*
+.azure/
+*.db
+*.db-*
+docs/
+evidence/
+infra/
+Dockerfile
+.dockerignore

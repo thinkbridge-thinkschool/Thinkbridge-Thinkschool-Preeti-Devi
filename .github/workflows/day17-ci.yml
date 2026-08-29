@@ -1,0 +1,186 @@
+# Day 17 — CI/CD for day-17/deploy-to-azure-static-web-apps
+#
+# CI (build + test) runs on every push and pull request that touches the Day 17 folder.
+# It needs no secrets and no Azure access, so it works on a fork and on a branch that is
+# never merged.
+#
+# CD (deploy to Azure Static Web Apps) is driven by one repository secret,
+# AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17. To refresh or re-create it, pipe
+# the token straight from Azure into gh so the value never lands in a shell history or a
+# process listing:
+#
+#   az staticwebapp secrets list -n quotes-store-day17 -g rg-day17-swa --query "properties.apiKey" -o tsv | gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17
+#
+# If that secret is ever removed the deploy job reports "skipped, no token" and stays
+# green rather than failing, so CI keeps working without it. The token authorises uploads
+# to this one Static Web App and nothing else; it is not an Azure credential and grants
+# no access to the API, the proxy, or the subscription.
+
+name: Day 17 CI/CD
+
+on:
+  push:
+    branches:
+      - day17-azure-static-web-apps
+      - main
+    paths:
+      - 'day-17/**'
+      - '.github/workflows/day17-ci.yml'
+  pull_request:
+    branches:
+      - day17-azure-static-web-apps
+      - main
+    paths:
+      - 'day-17/**'
+      - '.github/workflows/day17-ci.yml'
+  # Lets you run the whole thing — including a deploy — by hand from the Actions tab.
+  workflow_dispatch:
+
+# A second push supersedes the first; there is no point finishing a build of code that
+# has already been replaced. `main` is excluded so its history always has a real run.
+concurrency:
+  group: day17-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  PIECE_DIR: day-17/deploy-to-azure-static-web-apps
+  FRONTEND_DIR: day-17/deploy-to-azure-static-web-apps/frontend
+  BACKEND_DIR: day-17/deploy-to-azure-static-web-apps/backend
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend — test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      # `npm ci`, not `npm install` — it installs exactly what package-lock.json pins and
+      # fails if the lockfile and package.json have drifted apart.
+      - name: Install
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm ci
+
+      # The 12 store tests cover the stale-response race and the optimistic
+      # create/delete rollbacks. A regression there should stop the pipeline here.
+      - name: Test
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npx ng test
+
+      - name: Build (production configuration)
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npx ng build --configuration production
+
+      # The host configuration is an asset, not code, so nothing about a successful build
+      # proves it survived into the output. It has, twice, silently not.
+      - name: Check staticwebapp.config.json shipped
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: test -f dist/quotes-store-app/browser/staticwebapp.config.json
+
+      # Handed to the deploy job so it ships the exact bytes that were tested, rather
+      # than rebuilding and hoping the result matches.
+      - name: Upload bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: day17-frontend-bundle
+          path: ${{ env.FRONTEND_DIR }}/dist/quotes-store-app/browser
+          retention-days: 7
+
+  backend:
+    name: Backend — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: dotnet restore
+
+      - name: Build
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: dotnet build --configuration Release --no-restore
+
+      # There is no test project for this API — the Day 17 verification is the live
+      # scripts/verify.sh run, which needs Azure credentials this workflow deliberately
+      # does not hold. Publishing at least proves the app is deployable, not merely
+      # compilable.
+      - name: Publish
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: dotnet publish --configuration Release --no-build -o ${{ runner.temp }}/publish
+
+  scripts:
+    name: Scripts — syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # A deploy script that does not parse is worse than no deploy script, and the only
+      # place that shows up otherwise is halfway through a real deployment.
+      - name: bash -n every script
+        working-directory: ${{ env.PIECE_DIR }}/scripts
+        run: |
+          for f in *.sh; do
+            echo "checking $f"
+            bash -n "$f"
+          done
+
+  deploy:
+    name: Deploy to Azure Static Web Apps
+    needs: [frontend, backend, scripts]
+    # Never from a pull request: a PR build runs code from the head branch, and deploying
+    # it would let any PR overwrite the live site.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # The `secrets` context is not available in a job-level `if`, so the check has to
+      # happen in a step. Only the emptiness of the token is ever written to an output —
+      # never the token itself.
+      - name: Is the deployment token configured?
+        id: token
+        env:
+          SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 }}
+        run: |
+          if [ -n "$SWA_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Deploy skipped::AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 is not set, so CD is off. See the header of .github/workflows/day17-ci.yml to turn it on."
+          fi
+
+      - name: Download the tested bundle
+        if: steps.token.outputs.present == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: day17-frontend-bundle
+          path: bundle
+
+      # skip_app_build: the bundle was already built and tested in the frontend job, so
+      # the action uploads it as-is instead of guessing at a second build inside Oryx.
+      - name: Deploy
+        if: steps.token.outputs.present == 'true'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_QUOTES_STORE_DAY17 }}
+          action: upload
+          app_location: bundle
+          skip_app_build: true
+
+      - name: Smoke-check the live site
+        if: steps.token.outputs.present == 'true'
+        run: |
+          url="https://delightful-smoke-0b2c56200.7.azurestaticapps.net"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 "$url/")
+          echo "GET $url/ -> $code"
+          test "$code" = "200"

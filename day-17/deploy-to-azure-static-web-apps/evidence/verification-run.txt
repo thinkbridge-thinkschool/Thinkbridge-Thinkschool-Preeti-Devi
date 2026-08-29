@@ -1,0 +1,36 @@
+Day 17 verification — 2026-08-29T14:24:30Z
+  site:  https://delightful-smoke-0b2c56200.7.azurestaticapps.net
+  api:   https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io
+  proxy: https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io
+
+1. Reachability
+  PASS  static web app serves the app                              200
+  PASS  client route falls back to index.html                      200
+  PASS  api health                                                 200
+  PASS  proxy health                                               200
+
+2. Static Web Apps host configuration (public/staticwebapp.config.json)
+  PASS  CSP present                                                present
+  PASS  HSTS present                                               present
+  PASS  nosniff                                                    nosniff
+  PASS  index.html not cached                                      no-cache, must-revalidate
+
+3. CORS — the browser calls the API cross-origin from the Static Web App
+  PASS  GET /api/quotes allows the SWA origin                      https://delightful-smoke-0b2c56200.7.azurestaticapps.net
+  PASS  login preflight allowed                                    204
+  PASS  an unknown origin is not allowed                           
+
+4. Authorization is enforced (no token = no write)
+  PASS  POST /api/quotes without a token                           401
+  PASS  GET /api/quotes is anonymous                               200
+
+5. Managed Identity — the proxy writes with an Entra token it mints itself
+  PASS  proxy created a quote                                      created
+  PASS  quote owner == the MI's principal id                       e55a5f96-ae6a-4900-b38c-a97b6758717a
+  PASS  proxy still has no secrets                                 0
+  PASS  api still has no secrets                                   0
+  PASS  static web app has no app settings                         0
+  PASS  cleanup: DELETE via the proxy                              204
+
+-------------------------------------------------------------
+19 passed, 0 failed
