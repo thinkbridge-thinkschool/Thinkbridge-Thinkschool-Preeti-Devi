@@ -54,9 +54,9 @@ jobs:
     name: Frontend — test and build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -87,7 +87,7 @@ jobs:
       # Handed to the deploy job so it ships the exact bytes that were tested, rather
       # than rebuilding and hoping the result matches.
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: day17-frontend-bundle
           path: ${{ env.FRONTEND_DIR }}/dist/quotes-store-app/browser
@@ -97,9 +97,9 @@ jobs:
     name: Backend — build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -123,7 +123,7 @@ jobs:
     name: Scripts — syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # A deploy script that does not parse is worse than no deploy script, and the only
       # place that shows up otherwise is halfway through a real deployment.
@@ -160,7 +160,7 @@ jobs:
 
       - name: Download the tested bundle
         if: steps.token.outputs.present == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: day17-frontend-bundle
           path: bundle
