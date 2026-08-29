@@ -176,7 +176,6 @@ jobs:
           action: upload
           app_location: bundle
           skip_app_build: true
-          skip_api_build: true
 
       - name: Smoke-check the live site
         if: steps.token.outputs.present == 'true'
