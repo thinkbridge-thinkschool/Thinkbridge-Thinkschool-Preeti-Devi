@@ -1,0 +1,13 @@
+{
+  "name": "day17-quotesapi-mi-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Server-side proxy that acquires a Managed-Identity-issued Azure AD token (via the Container App's system-assigned identity) and forwards authenticated requests to the real Week-1 QuotesApi. Runs as its own Azure Container App. Never exposes the token to the browser.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.5.0"
+  }
+}

@@ -1,0 +1,10 @@
+/* Intentionally NOT in angular.json's `styles` array.
+ *
+ * Every entry there becomes a render-blocking <link> in index.html. This file has no
+ * rules — all styling is component-scoped — so building it shipped an empty stylesheet
+ * that blocked first paint for nothing. Lighthouse flagged it against the live site and
+ * removing it is one of the measured performance fixes.
+ *
+ * If real global styles are ever needed, add rules here and put "src/styles.css" back
+ * into projects.quotes-store-app.architect.build.options.styles.
+ */

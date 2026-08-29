@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+
+  "//navigationFallback": [
+    "The app routes on the client, so a cold load of /login must be answered with",
+    "index.html rather than a 404. The exclusions matter as much as the rule: without",
+    "them a mistyped asset path returns index.html with a 200, the browser tries to",
+    "parse HTML as JavaScript, and the failure surfaces far from its cause."
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/*.{css,js,mjs,map,json,txt,xml,ico,png,jpg,jpeg,gif,svg,webp,avif,woff,woff2,ttf,eot}"
+    ]
+  },
+
+  "routes": [
+    {
+      "//": "Hashed filenames are content-addressed (outputHashing: all), so a year is safe — any change ships under a new name.",
+      "route": "/*.{js,mjs,css,woff2,woff,png,jpg,jpeg,svg,webp,avif,ico}",
+      "headers": { "cache-control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "//": "The entry document is the one file whose name never changes; caching it strands users on an old build.",
+      "route": "/index.html",
+      "headers": { "cache-control": "no-cache, must-revalidate" }
+    },
+    {
+      "//": "Same reasoning — the bare route serves the same document.",
+      "route": "/",
+      "headers": { "cache-control": "no-cache, must-revalidate" }
+    }
+  ],
+
+  "//globalHeaders": [
+    "connect-src names both back ends explicitly: the Managed Identity proxy (quotes)",
+    "and the Week-1 API (auth/login). Those are the only cross-origin destinations",
+    "this app may reach, so an injected script cannot exfiltrate anywhere else. Keep",
+    "these in step with src/environments/environment.production.ts.",
+    "style-src needs 'unsafe-inline' because the Angular build inlines critical CSS",
+    "into a <style> tag; script-src does not, because every script it emits is a file."
+  ],
+  "globalHeaders": {
+    "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    "cross-origin-opener-policy": "same-origin"
+  },
+
+  "mimeTypes": {
+    ".json": "application/json",
+    ".webmanifest": "application/manifest+json",
+    ".woff2": "font/woff2"
+  },
+
+  "responseOverrides": {
+    "404": { "rewrite": "/index.html", "statusCode": 200 }
+  },
+
+  "//platform": "No apiRuntime block: this Static Web App has no managed functions. The Managed Identity lives on a separate Container App (mi-proxy/), because SWA's managed functions cannot be given one on the Free plan."
+}
