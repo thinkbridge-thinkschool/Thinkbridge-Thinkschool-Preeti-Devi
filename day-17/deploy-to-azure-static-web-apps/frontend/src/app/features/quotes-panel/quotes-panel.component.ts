@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { QuotesStore } from '../../core/state/quotes-store.service';
 import { AuthTokenService } from '../../core/services/auth-token.service';
@@ -9,7 +10,7 @@ type CreateState = 'idle' | 'submitting' | 'error';
 @Component({
   selector: 'app-quotes-panel',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './quotes-panel.component.html',
   styleUrls: ['./quotes-panel.component.css'],
 })
@@ -70,6 +71,10 @@ export class QuotesPanelComponent {
         );
       },
     });
+  }
+
+  signOut(): void {
+    this.authService.clearToken();
   }
 
   deleteQuote(id: number): void {
