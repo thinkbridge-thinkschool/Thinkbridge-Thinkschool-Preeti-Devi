@@ -201,6 +201,9 @@ git checkout <previous-sha> -- day-17/deploy-to-azure-static-web-apps/frontend
   `ConnectionStrings:Quotes` (default `/tmp/quotes.db`), which does not survive a
   revision restart. Accepted here: Day 17 is about the deployment and the identity
   wiring, not durability. `verify.sh` treats an empty list as a valid empty state.
-- **`index.html` cache headers.** The live Static Web App predates the `routes[]` cache
-  rules in `frontend/public/staticwebapp.config.json`, so `verify.sh` reports one failure
-  until the next `./scripts/deploy.sh frontend`.
+- **A stale host config fails silently.** Static Web Apps consumes
+  `frontend/public/staticwebapp.config.json` at deploy time rather than serving it, so
+  editing that file changes nothing until a frontend deploy actually ships it — and the
+  site keeps serving the previous config with no error anywhere. `verify.sh` catches the
+  gap (the `index.html not cached` check), and CI asserts the file survives into the
+  bundle at all, but neither can tell you the live site is running an older copy.
