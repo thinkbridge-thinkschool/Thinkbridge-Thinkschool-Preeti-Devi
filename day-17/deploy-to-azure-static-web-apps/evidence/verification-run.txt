@@ -1,4 +1,4 @@
-Day 17 verification — 2026-08-29T13:46:12Z
+Day 17 verification — 2026-08-29T14:24:30Z
   site:  https://delightful-smoke-0b2c56200.7.azurestaticapps.net
   api:   https://day-5-piece-2.bluesky-eec20d45.centralindia.azurecontainerapps.io
   proxy: https://day17-mi-proxy.bluesky-eec20d45.centralindia.azurecontainerapps.io
@@ -13,7 +13,7 @@ Day 17 verification — 2026-08-29T13:46:12Z
   PASS  CSP present                                                present
   PASS  HSTS present                                               present
   PASS  nosniff                                                    nosniff
-  FAIL  index.html not cached                                      expected no-cache, must-revalidate, got public, must-revalidate, max-age=30
+  PASS  index.html not cached                                      no-cache, must-revalidate
 
 3. CORS — the browser calls the API cross-origin from the Static Web App
   PASS  GET /api/quotes allows the SWA origin                      https://delightful-smoke-0b2c56200.7.azurestaticapps.net
@@ -33,4 +33,4 @@ Day 17 verification — 2026-08-29T13:46:12Z
   PASS  cleanup: DELETE via the proxy                              204
 
 -------------------------------------------------------------
-18 passed, 1 failed
+19 passed, 0 failed

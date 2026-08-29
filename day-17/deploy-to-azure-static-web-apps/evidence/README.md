@@ -17,8 +17,11 @@ three bugs found) and [`../agent-output.md`](../agent-output.md) (the build summ
 
 ## Reading `verification-run.txt`
 
-18 of the 19 checks pass. The failure is `index.html not cached`: Static Web Apps consumes
-`frontend/public/staticwebapp.config.json` at deploy time rather than serving it, and the
-currently-live deployment predates the `routes[]` cache rules in the restored file, so the
-site still returns SWA's default `public, must-revalidate, max-age=30`. It clears on the
-next `./scripts/deploy.sh frontend`.
+All 19 checks pass.
+
+`index.html not cached` is the one worth knowing about, because it was the last to go
+green. Static Web Apps consumes `frontend/public/staticwebapp.config.json` at deploy time
+rather than serving it, so the check reflects the config of the *last frontend deploy*,
+not the file in the working tree. It failed while the live site still predated the
+`routes[]` cache rules — returning SWA's default `public, must-revalidate, max-age=30` —
+and cleared the moment the CI/CD pipeline shipped a build containing them.

@@ -19,11 +19,8 @@ tier's edge, not a code defect, and is reported rather than rounded up; the reas
 the reverted experiment are in [`verification-log.md`](verification-log.md) and
 [`evidence/lighthouse-summary.txt`](evidence/lighthouse-summary.txt).
 
-Verified live on 2026-08-29 — `./scripts/verify.sh`, **18 passed, 1 failed**. The one
-failure is the `index.html` cache rule: Static Web Apps consumes
-`frontend/public/staticwebapp.config.json` at deploy time, and the currently-live
-deployment predates the `routes[]` cache rules in the restored file. It clears on the
-next `./scripts/deploy.sh frontend`. Full run:
+Verified live on 2026-08-29 — `./scripts/verify.sh`, **19 passed, 0 failed**, against the
+build the CI/CD pipeline shipped. Full run:
 [evidence/verification-run.txt](evidence/verification-run.txt).
 
 ## Layout
