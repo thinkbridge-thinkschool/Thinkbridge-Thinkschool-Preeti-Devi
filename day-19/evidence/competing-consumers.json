@@ -1,0 +1,23 @@
+﻿{
+    "perWorker":  [
+                      {
+                          "worker":  "sub-a#1",
+                          "handled":  7
+                      },
+                      {
+                          "worker":  "sub-a#2",
+                          "handled":  6
+                      },
+                      {
+                          "worker":  "sub-b#1",
+                          "handled":  6
+                      },
+                      {
+                          "worker":  "sub-b#2",
+                          "handled":  7
+                      }
+                  ],
+    "totalHandled":  26,
+    "distinctMessageIds":  13,
+    "workersThatDidWork":  4
+}

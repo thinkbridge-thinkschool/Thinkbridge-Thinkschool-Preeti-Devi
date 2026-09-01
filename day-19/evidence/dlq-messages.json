@@ -1,0 +1,42 @@
+﻿[
+    {
+        "subscription":  "sub-a",
+        "messageId":  "e72cdbb4-ea28-410a-8499-bce3ef3fceec",
+        "correlationId":  "day19-909-e72cdbb4ea28410a8499bce3ef3fce",
+        "deadLetterReason":  "UnsupportedEventType",
+        "deadLetterErrorDescription":  "Event type \u0027UnsupportedEvent\u0027 is not handled by this consumer build. Supported types: QuotePublished, QuoteRetired.",
+        "deliveryCount":  0,
+        "enqueuedTime":  "2026-09-01T10:24:49.04+00:00",
+        "body":  "{\"eventId\":\"e72cdbb4-ea28-410a-8499-bce3ef3fceec\",\"quoteId\":909,\"eventType\":\"UnsupportedEvent\"}"
+    },
+    {
+        "subscription":  "sub-a",
+        "messageId":  "3daf479a-4c7c-425c-a316-1a63e76eea35",
+        "correlationId":  "day19-910-3daf479a4c7c425ca3161a63e76eea",
+        "deadLetterReason":  "MaxDeliveryCountExceeded",
+        "deadLetterErrorDescription":  "Message could not be consumed after 3 delivery attempts.",
+        "deliveryCount":  3,
+        "enqueuedTime":  "2026-09-01T10:24:49.306+00:00",
+        "body":  "{\"eventId\":\"3daf479a-4c7c-425c-a316-1a63e76eea35\",\"quoteId\":910,\"eventType\":\"TransientFailureProbe\"}"
+    },
+    {
+        "subscription":  "sub-b",
+        "messageId":  "e72cdbb4-ea28-410a-8499-bce3ef3fceec",
+        "correlationId":  "day19-909-e72cdbb4ea28410a8499bce3ef3fce",
+        "deadLetterReason":  "UnsupportedEventType",
+        "deadLetterErrorDescription":  "Event type \u0027UnsupportedEvent\u0027 is not handled by this consumer build. Supported types: QuotePublished, QuoteRetired.",
+        "deliveryCount":  0,
+        "enqueuedTime":  "2026-09-01T10:24:49.04+00:00",
+        "body":  "{\"eventId\":\"e72cdbb4-ea28-410a-8499-bce3ef3fceec\",\"quoteId\":909,\"eventType\":\"UnsupportedEvent\"}"
+    },
+    {
+        "subscription":  "sub-b",
+        "messageId":  "3daf479a-4c7c-425c-a316-1a63e76eea35",
+        "correlationId":  "day19-910-3daf479a4c7c425ca3161a63e76eea",
+        "deadLetterReason":  "MaxDeliveryCountExceeded",
+        "deadLetterErrorDescription":  "Message could not be consumed after 3 delivery attempts.",
+        "deliveryCount":  3,
+        "enqueuedTime":  "2026-09-01T10:24:49.306+00:00",
+        "body":  "{\"eventId\":\"3daf479a-4c7c-425c-a316-1a63e76eea35\",\"quoteId\":910,\"eventType\":\"TransientFailureProbe\"}"
+    }
+]

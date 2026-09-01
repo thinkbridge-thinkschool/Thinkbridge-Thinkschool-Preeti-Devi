@@ -1,0 +1,11 @@
+﻿{
+    "messageId":  "0612a40d-42b7-4d96-bc29-7ef1cce24c09",
+    "afterDuplicate":  {
+                           "sub-a":  1,
+                           "sub-b":  1
+                       },
+    "beforeDuplicate":  {
+                            "sub-a":  1,
+                            "sub-b":  1
+                        }
+}
