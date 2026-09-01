@@ -1,0 +1,107 @@
+Day 19 - real Azure Service Bus verification
+Recorded 2026-09-01 15:54:09 +05:30
+
+== Azure topology ==
+{
+    "subscription":  "Azure for Students",
+    "subscriptionId":  "4d89877c-3cf4-491f-b999-03c9ff6bc7c3",
+    "user":  "shubh.rastogi2@s.amity.edu"
+}
+{
+    "endpoint":  "https://sb-day19-quotedemo.servicebus.windows.net:443/",
+    "location":  "eastasia",
+    "name":  "sb-day19-quotedemo",
+    "sku":  "Standard",
+    "status":  "Active"
+}
+
+Subscription state BEFORE the run:
+
+active deadLettered maxDeliveryCount subscription
+------ ------------ ---------------- ------------
+     0            2                3 sub-a       
+     0            2                3 sub-b       
+
+
+
+== Starting the app against sb-day19-quotedemo.servicebus.windows.net ==
+
+Drained 4 pre-existing dead-lettered message(s) so this run's evidence is unambiguous.
+
+== [1] Publish one event; both subscriptions should receive it ==
+eventId = 0612a40d-42b7-4d96-bc29-7ef1cce24c09
+{
+    "messageId":  "0612a40d-42b7-4d96-bc29-7ef1cce24c09",
+    "correlationId":  "day19-101-0612a40d42b74d96bc297ef1cce24c",
+    "topic":  "quote-events",
+    "fansOutTo":  [
+                      "sub-a",
+                      "sub-b"
+                  ]
+}
+counts after first publish: {"sub-a":1,"sub-b":1}
+
+== [2] Re-publish the SAME eventId; duplicate must be suppressed ==
+counts after duplicate:     {"sub-a":1,"sub-b":1}
+
+== [3] Burst of 12, so the two workers per subscription compete ==
+messages handled per worker:
+
+worker  handled
+------  -------
+sub-a#1       7
+sub-a#2       6
+sub-b#1       6
+sub-b#2       7
+
+
+
+
+== [4] Poison message (UnsupportedEvent) -> dead-lettered on delivery 1 ==
+poison MessageId = e72cdbb4-ea28-410a-8499-bce3ef3fceec
+
+== [5] Transient probe -> retried -> dead-lettered by Service Bus at MaxDeliveryCount ==
+probe MessageId  = 3daf479a-4c7c-425c-a316-1a63e76eea35
+
+Waiting for the real dead-letter queues to fill...
+
+== REAL AZURE DEAD-LETTER QUEUE ==
+
+
+subscription               : sub-a
+messageId                  : e72cdbb4-ea28-410a-8499-bce3ef3fceec
+deadLetterReason           : UnsupportedEventType
+deadLetterErrorDescription : Event type 'UnsupportedEvent' is not handled by this consumer build. Supported types: QuotePublished, QuoteRetired.
+deliveryCount              : 0
+
+subscription               : sub-a
+messageId                  : 3daf479a-4c7c-425c-a316-1a63e76eea35
+deadLetterReason           : MaxDeliveryCountExceeded
+deadLetterErrorDescription : Message could not be consumed after 3 delivery attempts.
+deliveryCount              : 3
+
+subscription               : sub-b
+messageId                  : e72cdbb4-ea28-410a-8499-bce3ef3fceec
+deadLetterReason           : UnsupportedEventType
+deadLetterErrorDescription : Event type 'UnsupportedEvent' is not handled by this consumer build. Supported types: QuotePublished, QuoteRetired.
+deliveryCount              : 0
+
+subscription               : sub-b
+messageId                  : 3daf479a-4c7c-425c-a316-1a63e76eea35
+deadLetterReason           : MaxDeliveryCountExceeded
+deadLetterErrorDescription : Message could not be consumed after 3 delivery attempts.
+deliveryCount              : 3
+
+
+
+
+
+== Azure control-plane counts AFTER the run (az CLI, independent of the app) ==
+
+active deadLettered maxDeliveryCount subscription
+------ ------------ ---------------- ------------
+     0            2                3 sub-a       
+     0            2                3 sub-b       
+
+
+

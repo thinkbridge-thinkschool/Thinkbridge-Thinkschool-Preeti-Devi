@@ -1,0 +1,170 @@
+﻿{
+    "countBySubscription":  {
+                                "sub-a":  13,
+                                "sub-b":  13
+                            },
+    "workBySubscription":  {
+                               "sub-a":  [
+                                             "QuotePublished:101",
+                                             "QuotePublished:201",
+                                             "QuotePublished:202",
+                                             "QuotePublished:203",
+                                             "QuotePublished:204",
+                                             "QuotePublished:205",
+                                             "QuotePublished:206",
+                                             "QuotePublished:207",
+                                             "QuotePublished:208",
+                                             "QuotePublished:209",
+                                             "QuotePublished:210",
+                                             "QuotePublished:211",
+                                             "QuotePublished:212"
+                                         ],
+                               "sub-b":  [
+                                             "QuotePublished:101",
+                                             "QuotePublished:201",
+                                             "QuotePublished:202",
+                                             "QuotePublished:203",
+                                             "QuotePublished:204",
+                                             "QuotePublished:205",
+                                             "QuotePublished:206",
+                                             "QuotePublished:207",
+                                             "QuotePublished:208",
+                                             "QuotePublished:209",
+                                             "QuotePublished:210",
+                                             "QuotePublished:211",
+                                             "QuotePublished:212"
+                                         ]
+                           },
+    "ledger":  [
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "0612a40d-42b7-4d96-bc29-7ef1cce24c09",
+                       "processedAt":  "2026-09-01T10:24:37.0861742+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "0612a40d-42b7-4d96-bc29-7ef1cce24c09",
+                       "processedAt":  "2026-09-01T10:24:37.0861773+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "fc1e1e84-1b14-445c-83a0-9d873133d98e",
+                       "processedAt":  "2026-09-01T10:24:46.170302+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "fc1e1e84-1b14-445c-83a0-9d873133d98e",
+                       "processedAt":  "2026-09-01T10:24:46.2003262+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "5e9ef318-a530-49eb-a746-4bf0568a0a35",
+                       "processedAt":  "2026-09-01T10:24:46.278512+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "5e9ef318-a530-49eb-a746-4bf0568a0a35",
+                       "processedAt":  "2026-09-01T10:24:46.2785336+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "21ad78bd-665c-4f52-ab14-a8c7efe4e4b6",
+                       "processedAt":  "2026-09-01T10:24:46.479124+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "21ad78bd-665c-4f52-ab14-a8c7efe4e4b6",
+                       "processedAt":  "2026-09-01T10:24:46.4791818+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "6e7af961-a2f4-4483-8798-c3135bb332c6",
+                       "processedAt":  "2026-09-01T10:24:46.6967159+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "6e7af961-a2f4-4483-8798-c3135bb332c6",
+                       "processedAt":  "2026-09-01T10:24:46.6967424+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "e7a687c2-3de5-47b4-9112-f6cdfbcff7f0",
+                       "processedAt":  "2026-09-01T10:24:46.8208281+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "e7a687c2-3de5-47b4-9112-f6cdfbcff7f0",
+                       "processedAt":  "2026-09-01T10:24:46.8210139+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "cefc11c2-432f-4599-86de-b1c81ab59267",
+                       "processedAt":  "2026-09-01T10:24:47.0072097+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "cefc11c2-432f-4599-86de-b1c81ab59267",
+                       "processedAt":  "2026-09-01T10:24:47.007211+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "a14bbf92-4ed5-4ecf-9688-0ac21a6f152d",
+                       "processedAt":  "2026-09-01T10:24:47.2725123+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "a14bbf92-4ed5-4ecf-9688-0ac21a6f152d",
+                       "processedAt":  "2026-09-01T10:24:47.2725129+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "fbb457ba-bef9-4fc8-8357-a74b892f96a7",
+                       "processedAt":  "2026-09-01T10:24:47.502357+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "fbb457ba-bef9-4fc8-8357-a74b892f96a7",
+                       "processedAt":  "2026-09-01T10:24:47.5030128+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "460ec50e-d073-4d8d-bc7f-a4b5b6851be7",
+                       "processedAt":  "2026-09-01T10:24:47.6258376+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "460ec50e-d073-4d8d-bc7f-a4b5b6851be7",
+                       "processedAt":  "2026-09-01T10:24:47.6258824+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "a5a8ce39-23e4-4cc7-9317-ce3d70818750",
+                       "processedAt":  "2026-09-01T10:24:47.9189309+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "a5a8ce39-23e4-4cc7-9317-ce3d70818750",
+                       "processedAt":  "2026-09-01T10:24:47.9189545+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "c1ce334d-5e8d-47e0-8c60-73c1aa558f8d",
+                       "processedAt":  "2026-09-01T10:24:48.0781295+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "c1ce334d-5e8d-47e0-8c60-73c1aa558f8d",
+                       "processedAt":  "2026-09-01T10:24:48.0781295+00:00"
+                   },
+                   {
+                       "subscription":  "sub-b",
+                       "messageId":  "1e93f24c-d95d-4a39-b138-0e5c5d18c923",
+                       "processedAt":  "2026-09-01T10:24:48.3106257+00:00"
+                   },
+                   {
+                       "subscription":  "sub-a",
+                       "messageId":  "1e93f24c-d95d-4a39-b138-0e5c5d18c923",
+                       "processedAt":  "2026-09-01T10:24:48.3107419+00:00"
+                   }
+               ]
+}

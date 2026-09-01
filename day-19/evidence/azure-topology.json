@@ -1,0 +1,36 @@
+﻿{
+    "topic":  "quote-events",
+    "sku":  "Standard",
+    "after":  [
+                  {
+                      "active":  0,
+                      "deadLettered":  2,
+                      "maxDeliveryCount":  3,
+                      "subscription":  "sub-a"
+                  },
+                  {
+                      "active":  0,
+                      "deadLettered":  2,
+                      "maxDeliveryCount":  3,
+                      "subscription":  "sub-b"
+                  }
+              ],
+    "before":  [
+                   {
+                       "active":  0,
+                       "deadLettered":  2,
+                       "maxDeliveryCount":  3,
+                       "subscription":  "sub-a"
+                   },
+                   {
+                       "active":  0,
+                       "deadLettered":  2,
+                       "maxDeliveryCount":  3,
+                       "subscription":  "sub-b"
+                   }
+               ],
+    "namespace":  "sb-day19-quotedemo",
+    "location":  "eastasia",
+    "subscriptionId":  "4d89877c-3cf4-491f-b999-03c9ff6bc7c3",
+    "endpoint":  "https://sb-day19-quotedemo.servicebus.windows.net:443/"
+}

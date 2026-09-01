@@ -1,0 +1,9 @@
+﻿{
+    "messageId":  "0612a40d-42b7-4d96-bc29-7ef1cce24c09",
+    "correlationId":  "day19-101-0612a40d42b74d96bc297ef1cce24c",
+    "topic":  "quote-events",
+    "fansOutTo":  [
+                      "sub-a",
+                      "sub-b"
+                  ]
+}

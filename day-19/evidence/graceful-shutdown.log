@@ -1,0 +1,16 @@
+15:33:59.901 info: Microsoft.Hosting.Lifetime[14] Now listening on: http://localhost:5262
+15:33:59.913 info: Microsoft.Hosting.Lifetime[0] Application started. Press Ctrl+C to shut down.
+15:33:59.913 info: Microsoft.Hosting.Lifetime[0] Hosting environment: Production
+15:33:59.913 info: Microsoft.Hosting.Lifetime[0] Content root path: C:\Users\abhinav\thinkschool\Thinkbridge-Thinkschool-Preeti-Devi\day-19\src\Day19.Events\bin\Debug\net10.0
+15:33:59.936 info: Day19.Events.SubscriptionWorker[0] Worker sub-a#1 listening on subscription sub-a (MaxConcurrentCalls=2).
+15:33:59.936 info: Day19.Events.SubscriptionWorker[0] Worker sub-b#1 listening on subscription sub-b (MaxConcurrentCalls=2).
+15:33:59.936 info: Day19.Events.SubscriptionWorker[0] Worker sub-b#2 listening on subscription sub-b (MaxConcurrentCalls=2).
+15:33:59.962 info: Day19.Events.SubscriptionWorker[0] Worker sub-a#2 listening on subscription sub-a (MaxConcurrentCalls=2).
+15:34:04.754 info: Day19.Events.EventPublisher[0] Published MessageId=dc063920-382a-4032-9da5-5acaedddb6bb CorrelationId=day19-777-dc063920382a40329da55acaedddb6 to topic quote-events.
+15:34:04.901 info: Day19.Events.EventDispatcher[0] [sub-a] worker sub-a#1 handled MessageId=dc063920-382a-4032-9da5-5acaedddb6bb CorrelationId=day19-777-dc063920382a40329da55acaedddb6 quoteId=777 type=QuotePublished delivery=1.
+15:34:04.901 info: Day19.Events.EventDispatcher[0] [sub-b] worker sub-b#1 handled MessageId=dc063920-382a-4032-9da5-5acaedddb6bb CorrelationId=day19-777-dc063920382a40329da55acaedddb6 quoteId=777 type=QuotePublished delivery=1.
+15:34:07.797 info: Microsoft.Hosting.Lifetime[0] Application is shutting down...
+15:34:07.833 info: Day19.Events.SubscriptionWorker[0] Worker sub-b#2 on sub-b stopped cleanly.
+15:34:08.008 info: Day19.Events.SubscriptionWorker[0] Worker sub-b#1 on sub-b stopped cleanly.
+15:34:08.303 info: Day19.Events.SubscriptionWorker[0] Worker sub-a#2 on sub-a stopped cleanly.
+15:34:08.589 info: Day19.Events.SubscriptionWorker[0] Worker sub-a#1 on sub-a stopped cleanly.
